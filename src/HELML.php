@@ -14,7 +14,7 @@ class HELML {
         'U' => null,
         'T' => true,
         'F' => false,
-        'NaN' => NAN,
+        'NAN' => NAN,
         'INF' => INF,
         'NIF' =>-INF,
     ];
@@ -218,7 +218,7 @@ class HELML {
             case 'double':
             case 'float':
                 if (is_nan($value)) {
-                    return $spc_ch . $spc_ch . 'NaN';
+                    return $spc_ch . $spc_ch . 'NAN';
                 } elseif (is_infinite($value)) {
                     return $spc_ch . $spc_ch . ($value > 0 ? 'INF' : 'NIF');
                 }
