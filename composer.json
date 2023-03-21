@@ -1,0 +1,20 @@
+{
+    "name": "dynoser/helml",
+    "description": "PHP implementation of the HELML class without dependencies",
+    "keywords": ["array", "serialize", "serialization", "JSON", "YAML", "HELML"],
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "AlexanderJer",
+            "email": "alexierusalim@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "dynoser\\HELML\\": "src/"
+        }
+    }
+}
