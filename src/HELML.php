@@ -29,6 +29,8 @@ class HELML {
     
     // Default value decoder is self::decodeValue, may be replace here
     public static $CUSTOM_VALUE_DECODER = null;
+    
+    public static $ENABLE_BONES = false;
 
     // Main function to encode an array into HELML format
     public static function encode($arr, $url_mode = false) {
@@ -39,7 +41,7 @@ class HELML {
         $str_imp = $url_mode ? "~" : "\n";
         $lvl_ch = $url_mode ? '.' : ':';
         $spc_ch = $url_mode ? '_' : ' ';
-        self::_encode($arr, $results_arr, 0, $lvl_ch, $spc_ch);
+        self::_encode($arr, $results_arr, 0, $lvl_ch, $spc_ch, self::isArrayList($arr));
         return implode($str_imp, $results_arr);
     }
 
@@ -57,7 +59,8 @@ class HELML {
         &$results_arr,
         $level = 0,
         $lvl_ch = ":",
-        $spc_ch = " "
+        $spc_ch = " ",
+        $num_keys_cnt = 0
     ) {
         foreach ($arr as $key => $value) {
 
@@ -67,21 +70,27 @@ class HELML {
             if (false !== strpos($key, $lvl_ch) || false !== strpos($key, '~') || '#' === $fc  || $fc === $spc_ch || $fc === ' ') {
                 $fc = "-";
             }
-            if ("-" === $fc || $lc === $spc_ch || $lc === ' ' || !preg_match('/^[[:print:]]*$/', $key)) {
+            if ("-" === $fc || $lc === $spc_ch || $lc === ' ' || !strlen($key) || !preg_match('/^[[:print:]]*$/', $key)) {
                 // Add "-" to the beginning of the key to indicate it's in base64url
                 $key = "-" . self::base64url_encode($key);
+            }
+            
+            // Use auto-increment key index if possible
+            if ($num_keys_cnt && self::$ENABLE_BONES) {
+                $key = '--';
             }
 
             // Add the appropriate number of colons to the left of the key, based on the current level
             $key = str_repeat($lvl_ch, $level) . $key;
 
             if (is_array($value)) {
-                if (self::isArrayList($value)) {
-                    $key .= ':';
+                $val_num_keys = self::isArrayList($value);
+                if ($val_num_keys) {
+                    $key .= $lvl_ch;
                 }
                 // If the value is an array, call this function recursively and increase the level
                 $results_arr[] = $key;
-                self::_encode($value, $results_arr, $level + 1, $lvl_ch, $spc_ch);
+                self::_encode($value, $results_arr, $level + 1, $lvl_ch, $spc_ch, $val_num_keys);
             } else {
                 // If the value is not an array, run it through a value encoding function, if one is specified
                 $value = null === self::$CUSTOM_VALUE_ENCODER ? self::valueEncoder($value, $spc_ch) : call_user_func(self::$CUSTOM_VALUE_ENCODER, $value);
@@ -146,14 +155,6 @@ class HELML {
             $key = $parts[0] ? $parts[0] : 0;
             $value = isset($parts[1]) ? $parts[1] : null;
 
-            // Decode the key if it starts with an equals sign
-            if (is_string($key) && ('-' === substr($key, 0, 1))) {
-                $key = self::base64url_decode(substr($key, 1));
-                if (!$key) {
-                    $key = "ERR";
-                }
-            }
-
             // Remove keys from the stack until it matches the current level
             while (count($stack) > $level) {
                 array_pop($stack);
@@ -163,6 +164,19 @@ class HELML {
             $parent = &$result;
             foreach ($stack as $parentKey) {
                 $parent = &$parent[$parentKey];
+            }
+            
+            // Decode the key if it starts with an equals sign
+            if (is_string($key) && ('-' === substr($key, 0, 1))) {
+                if ($key === '--' || $key === '---') {
+                    // auto-create next numeric key
+                    $key = count($parent);
+                } else {
+                    $decoded_key = self::base64url_decode(substr($key, 1));
+                    if (false !== $decoded_key) {
+                        $key = $decoded_key;
+                    }
+                }
             }
 
             // If the value is null, start a new array and add it to the parent array
@@ -279,18 +293,27 @@ class HELML {
         return $decoded;
     }
     
+    /**
+     * if the array is a list with keys 0,1,2..,
+     * then returns the number of elements
+     * otherwise returns 0
+     * 
+     * @param array $arr
+     * @param int $expected_count
+     * @return int
+     */
     public static function isArrayList(&$arr, $expected_count = false)
     {
         if (!array_key_exists(0, $arr))
-            return false;
+            return 0;
         $el_count = count($arr);
         if ($expected_count && ($el_count != $expected_count))
-            return false;
+            return 0;
         for($i = 1; $i < $el_count; $i++) {
             if (!array_key_exists($i, $arr))
-                return false;
+                return 0;
         }
-        return true;
+        return $el_count;
     }
     
     /**
