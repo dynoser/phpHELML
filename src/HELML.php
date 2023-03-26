@@ -30,7 +30,8 @@ class HELML {
     // Default value decoder is self::decodeValue, may be replace here
     public static $CUSTOM_VALUE_DECODER = null;
     
-    public static $ENABLE_BONES = false;
+    public static $ENABLE_BONES = true;
+    public static $ENABLE_SPC_IDENT = true;
 
     // Main function to encode an array into HELML format
     public static function encode($arr, $url_mode = false) {
@@ -42,6 +43,9 @@ class HELML {
         $lvl_ch = $url_mode ? '.' : ':';
         $spc_ch = $url_mode ? '_' : ' ';
         self::_encode($arr, $results_arr, 0, $lvl_ch, $spc_ch, self::isArrayList($arr));
+        if ($url_mode && count($results_arr) === 1) {
+            $results_arr[] = '';
+        }
         return implode($str_imp, $results_arr);
     }
 
@@ -58,8 +62,8 @@ class HELML {
         $arr,
         &$results_arr,
         $level = 0,
-        $lvl_ch = ":",
-        $spc_ch = " ",
+        $lvl_ch = ':',
+        $spc_ch = ' ',
         $num_keys_cnt = 0
     ) {
         foreach ($arr as $key => $value) {
@@ -68,11 +72,11 @@ class HELML {
             $fc = substr($key, 0, 1);
             $lc = substr($key, -1, 1);
             if (false !== strpos($key, $lvl_ch) || false !== strpos($key, '~') || '#' === $fc  || $fc === $spc_ch || $fc === ' ') {
-                $fc = "-";
+                $fc = '-';
             }
-            if ("-" === $fc || $lc === $spc_ch || $lc === ' ' || !strlen($key) || !preg_match('/^[[:print:]]*$/', $key)) {
+            if ('-' === $fc || $lc === $spc_ch || $lc === ' ' || !strlen($key) || !preg_match('/^[[:print:]]*$/', $key)) {
                 // Add "-" to the beginning of the key to indicate it's in base64url
-                $key = "-" . self::base64url_encode($key);
+                $key = '-' . self::base64url_encode($key);
             }
             
             // Use auto-increment key index if possible
@@ -82,6 +86,11 @@ class HELML {
 
             // Add the appropriate number of colons to the left of the key, based on the current level
             $key = str_repeat($lvl_ch, $level) . $key;
+            
+            // add space-ident to the left of the key (if need)
+            if (self::$ENABLE_SPC_IDENT && ' ' === $spc_ch) {
+                $key = str_repeat($spc_ch, $level) . $key;
+            }
 
             if (is_array($value)) {
                 $val_num_keys = self::isArrayList($value);
@@ -107,10 +116,15 @@ class HELML {
      * @return array
      * @throws InvalidArgumentException
      */
-    public static function decode($src_rows) {
+    public static function decode($src_rows, $only_layer_name = null) {
         // If the input is an array, use it. Otherwise, split the input string into an array.
         $lvl_ch = ':';
         $spc_ch = ' ';
+        
+        $layer_init = 0;
+        $layer_curr = $layer_init;
+        $layer_name = $only_layer_name ? $only_layer_name : $layer_init;
+            
         if (is_array($src_rows)) {
             $str_arr = $src_rows;
         } elseif (is_string($src_rows)) {
@@ -158,6 +172,7 @@ class HELML {
             // Remove keys from the stack until it matches the current level
             while (count($stack) > $level) {
                 array_pop($stack);
+                $layer_curr = $layer_init;
             }
 
             // Find the parent element in the result array for the current key
@@ -171,6 +186,9 @@ class HELML {
                 if ($key === '--' || $key === '---') {
                     // auto-create next numeric key
                     $key = count($parent);
+                } elseif ($key === '-+') {
+                    $layer_curr = $value ? $value : ($layer_curr + 1);
+                    continue;
                 } else {
                     $decoded_key = self::base64url_decode(substr($key, 1));
                     if (false !== $decoded_key) {
@@ -183,7 +201,7 @@ class HELML {
             if ((null === $value) || !strlen($value)) {
                 $parent[$key] = [];
                 array_push($stack, $key);
-            } else {
+            } elseif ($layer_name == $layer_curr) {
                 // Use default valueDecoder or custom decoder function is specified
                 $value = null === self::$CUSTOM_VALUE_DECODER ? self::valueDecoder($value, $spc_ch) : call_user_func(self::$CUSTOM_VALUE_DECODER, $value, $spc_ch);
                 // Add the key-value pair to the current array
@@ -217,7 +235,7 @@ class HELML {
                 }
                 if ($need_encode || !preg_match($reg_str, $value) || (('_' === $spc_ch) && (false !== strpos($value, '~')))) {
                     // if the string contains special characters, encode it in base64
-                    return self::base64url_encode($value);
+                    return '-' . self::base64url_encode($value);
                 } elseif (!strlen($value) || ($spc_ch === $value[0]) || ($spc_ch == substr($value, -1)) || ctype_space(substr($value, -1))) {
                     // for empty strings or those that have spaces at the beginning or end
                     return "'" . $value . "'";
@@ -238,7 +256,7 @@ class HELML {
                 }
                 if ('_' === $spc_ch) {
                     // for url-mode because dot-inside
-                    return self::base64url_encode($value);
+                    return '-' . self::base64url_encode((string)$value);
                 }
                 // if not url mode, go below
             case 'integer':
@@ -263,17 +281,17 @@ class HELML {
                 return substr($encodedValue, 1);
             }
             // if the string starts with two spaces, then it encodes a non-string value
-            $encodedValue = substr($encodedValue, 2); // strip left spaces
-            if (is_numeric($encodedValue)) {
+            $slicedValue = substr($encodedValue, 2); // strip left spaces
+            if (is_numeric($slicedValue)) {
                 // it's probably a numeric value
-                if (strpos($encodedValue, '.')) {
+                if (strpos($slicedValue, '.')) {
                     // if there's a decimal point, it's a floating point number
-                    return (double) $encodedValue;
+                    return (double) $slicedValue;
                 }
                 // if there's no decimal point, it's an integer
-                return (int) $encodedValue;
-            } elseif (array_key_exists($encodedValue, self::$SPEC_TYPE_VALUES)) {
-                return self::$SPEC_TYPE_VALUES[$encodedValue];
+                return (int) $slicedValue;
+            } elseif (array_key_exists($slicedValue, self::$SPEC_TYPE_VALUES)) {
+                return self::$SPEC_TYPE_VALUES[$slicedValue];
             } elseif (self::$CUSTOM_FORMAT_DECODER) {
                 return call_user_func(self::$CUSTOM_FORMAT_DECODER, $encodedValue);
             }            
@@ -284,13 +302,16 @@ class HELML {
                 return $encodedValue;
             }
             return stripcslashes($encodedValue);
+        } elseif ('-' === $first_char) {
+            return self::base64url_decode(substr($encodedValue, 1));
         }
-        // if there are no spaces or quotes at the beginning, the value should be in base64
-        $decoded = self::base64url_decode($encodedValue);
-        if (false === $decoded) {
-            return $encodedValue; // Fallback if can't decode
+
+        // if there are no spaces or quotes or "-" at the beginning
+        if (self::$CUSTOM_FORMAT_DECODER) {
+            return call_user_func(self::$CUSTOM_FORMAT_DECODER, $encodedValue);
         }
-        return $decoded;
+        
+        return self::base64url_decode($encodedValue);
     }
     
     /**
