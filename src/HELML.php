@@ -116,15 +116,16 @@ class HELML {
      * @return array
      * @throws InvalidArgumentException
      */
-    public static function decode($src_rows, $only_layer_name = null) {
+    public static function decode($src_rows, $layers_list = [0]) {
         // If the input is an array, use it. Otherwise, split the input string into an array.
         $lvl_ch = ':';
         $spc_ch = ' ';
         
         $layer_init = 0;
         $layer_curr = $layer_init;
-        $layer_name = $only_layer_name ? $only_layer_name : $layer_init;
-            
+        $layers_list = array_flip($layers_list); // move values into keys
+        $all_layers = [$layer_init => 1];
+
         if (is_array($src_rows)) {
             $str_arr = $src_rows;
         } elseif (is_string($src_rows)) {
@@ -187,7 +188,10 @@ class HELML {
                     // auto-create next numeric key
                     $key = count($parent);
                 } elseif ($key === '-+') {
-                    $layer_curr = $value ? $value : ($layer_curr + 1);
+                    $layer_curr = ($value  || $value === '0') ? $value : (is_numeric($layer_curr) ? ($layer_curr + 1) : 0);
+                    if (empty($all_layers[$layer_curr])) {
+                        $all_layers[$layer_curr] = 1;
+                    }
                     continue;
                 } else {
                     $decoded_key = self::base64url_decode(substr($key, 1));
@@ -201,12 +205,16 @@ class HELML {
             if ((null === $value) || !strlen($value)) {
                 $parent[$key] = [];
                 array_push($stack, $key);
-            } elseif ($layer_name == $layer_curr) {
+            } elseif (array_key_exists($layer_curr, $layers_list)) {
                 // Use default valueDecoder or custom decoder function is specified
                 $value = null === self::$CUSTOM_VALUE_DECODER ? self::valueDecoder($value, $spc_ch) : call_user_func(self::$CUSTOM_VALUE_DECODER, $value, $spc_ch);
                 // Add the key-value pair to the current array
                 $parent[$key] = $value;
             }
+        }
+        
+        if (count($all_layers) > 1) {
+            $result['_layers'] = array_keys($all_layers);
         }
 
         // Return the result array
