@@ -51,7 +51,6 @@ print($encoded_data)
 
 # Decode the HELML string back into a data structure
 $decoded_data = HELML::decode($encoded_data);
-print($decoded_data)
 ```
 encoded_data:
 ```console
