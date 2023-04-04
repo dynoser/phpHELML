@@ -33,7 +33,14 @@ class HELML {
     public static $ENABLE_BONES = true;
     public static $ENABLE_SPC_IDENT = true;
 
-    // Main function to encode an array into HELML format
+    /**
+     * Encode array to HELML string
+     *
+     * @param array $arr
+     * @param bool $url_mode
+     * @return string
+     * @throws InvalidArgumentException
+     */
     public static function encode($arr, $url_mode = false) {
         $results_arr = [];
         if (!is_array($arr)) {
@@ -43,7 +50,10 @@ class HELML {
         $lvl_ch = $url_mode ? '.' : ':';
         $spc_ch = $url_mode ? '_' : ' ';
         self::_encode($arr, $results_arr, 0, $lvl_ch, $spc_ch, self::isArrayList($arr));
+
         if ($url_mode && count($results_arr) === 1) {
+            // Add empty string in URL mode if results contain only one string
+            // This is necessary in order to add the ~ symbol to the results.
             $results_arr[] = '';
         }
         return implode($str_imp, $results_arr);
@@ -53,10 +63,11 @@ class HELML {
      * Recursive helper function to process each key-value pair in the input array
      * 
      * @param array $arr
-     * @param array $results_arr
+     * @param array &$results_arr
      * @param int $level
      * @param string $lvl_ch
      * @param string $spc_ch
+     * @param int $is_list
      */
     public static function _encode(
         $arr,
@@ -64,24 +75,34 @@ class HELML {
         $level = 0,
         $lvl_ch = ':',
         $spc_ch = ' ',
-        $num_keys_cnt = 0
+        $is_list = 0
     ) {
         foreach ($arr as $key => $value) {
 
-            // Encode $key in base64url if it contains unwanted characters
-            $fc = substr($key, 0, 1);
-            $lc = substr($key, -1, 1);
-            if (false !== strpos($key, $lvl_ch) || false !== strpos($key, '~') || '#' === $fc  || $fc === $spc_ch || $fc === ' ') {
-                $fc = '-';
-            }
-            if ('-' === $fc || $lc === $spc_ch || $lc === ' ' || !strlen($key) || !preg_match('/^[[:print:]]*$/', $key)) {
-                // Add "-" to the beginning of the key to indicate it's in base64url
-                $key = '-' . self::base64url_encode($key);
-            }
-            
             // Use auto-increment key index if possible
-            if ($num_keys_cnt && self::$ENABLE_BONES) {
+            if ($is_list && self::$ENABLE_BONES) {
                 $key = '--';
+            } else if (!$is_list) {
+                // Encode $key in base64url if it contains unwanted characters
+                if (strlen($key)) {
+                    $fc = substr($key, 0, 1);
+                    $lc = substr($key, -1, 1);
+                    if ('#' === $fc  || $fc === $spc_ch || $fc === ' ' || $lc === $spc_ch || $lc === ' ' || false !== strpos($key, $lvl_ch)) {
+                        $fc = '-';
+                    } else {
+                        $pattern = ($spc_ch == '_') ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u';
+                        if (!preg_match($pattern, $key)) {
+                            $fc = '-';
+                        }
+                    }
+                    if ('-' === $fc) {
+                        // Add "-" to the beginning of the key to indicate it's in base64url
+                        $key = '-' . self::base64url_encode($key);
+                    }
+                } else {
+                    $key = '-';
+                }
+                
             }
 
             // Add the appropriate number of colons to the left of the key, based on the current level
@@ -93,13 +114,13 @@ class HELML {
             }
 
             if (is_array($value)) {
-                $val_num_keys = self::isArrayList($value);
-                if ($val_num_keys) {
+                $is_num_keys = self::isArrayList($value);
+                if ($is_num_keys) {
                     $key .= $lvl_ch;
                 }
                 // If the value is an array, call this function recursively and increase the level
                 $results_arr[] = $key;
-                self::_encode($value, $results_arr, $level + 1, $lvl_ch, $spc_ch, $val_num_keys);
+                self::_encode($value, $results_arr, $level + 1, $lvl_ch, $spc_ch, $is_num_keys);
             } else {
                 // If the value is not an array, run it through a value encoding function, if one is specified
                 $value = null === self::$CUSTOM_VALUE_ENCODER ? self::valueEncoder($value, $spc_ch) : call_user_func(self::$CUSTOM_VALUE_ENCODER, $value);
@@ -233,28 +254,30 @@ class HELML {
         $type = gettype($value);
         switch ($type) {
             case 'string':
-                if ('_' === $spc_ch) {
-                    // for url-mode
-                    $need_encode = (false !== strpos($value, '~'));
-                    $reg_str = '/^[ -~]*$/';
-                } else {
-                    $need_encode = false;
-                    $reg_str = '/^[[:print:]]*$/u';
+                if (!strlen($value)) {
+                    return '-';
                 }
-                if ($need_encode || !preg_match($reg_str, $value) || (('_' === $spc_ch) && (false !== strpos($value, '~')))) {
-                    // if the string contains special characters, encode it in base64
+                $fc = $value[0];
+                $lc = substr($value, -1);
+
+                if (!preg_match(($spc_ch == '_') ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u', $value)) {
+                    $fc = '-';
+                }
+                if ($fc === '-') {
                     return '-' . self::base64url_encode($value);
-                } elseif (!strlen($value) || ($spc_ch === $value[0]) || ($spc_ch == substr($value, -1)) || ctype_space(substr($value, -1))) {
+                } elseif ($spc_ch === $fc || ' ' === $fc ||  $spc_ch === $lc || ctype_space($lc)) {
                     // for empty strings or those that have spaces at the beginning or end
                     return "'" . $value . "'";
-                } else {
-                    // if the value is simple, just add one space at the beginning
-                    return $spc_ch . $value;
                 }
+                // if the value is simple, just add one space at the beginning
+                return $spc_ch . $value;
+
             case 'boolean':
                 return $spc_ch . $spc_ch . ($value ? 'T' : 'F');
+
             case 'NULL':
                 return $spc_ch . $spc_ch . 'N';
+
             case 'double':
             case 'float':
                 if (is_nan($value)) {
