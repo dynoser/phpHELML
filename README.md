@@ -30,7 +30,13 @@ require_once "src/HELML.php";  # include file
 
 # Usage
 
-Here's a quick example of how to use the HELML library:
+This package contains two independent classes:
+ * class `HELML` - encoder/decoder HELML-format
+ * class `LoadHELMLfile` - selective data-section loader from HELML file
+
+## class HELML
+
+Here's a quick example of how to use the `HELML` class:
 
 ```PHP
 use dynoser\HELML\HELML;
@@ -48,7 +54,7 @@ $data = [
 
 # Encode the data structure into a HELML string
 $encoded_data = HELML::encode($data);
-print($encoded_data)
+print_r($encoded_data)
 
 # Decode the HELML string back into a data structure
 $decoded_data = HELML::decode($encoded_data);
@@ -91,6 +97,115 @@ Decode a HELML formatted string or list of strings into a nested dictionary.
 Returns:
 
 - Array: The decoded nested array.
+
+
+## Class LoadHELMLfile
+
+This class implements selective loading of sections from a file in HELML format.
+
+```PHP
+use dynoser\HELML\LoadHELMLfile;
+
+require_once 'src/LoadHELMLfile.php';// path to file, or require "autoload.php"
+
+/*
+For example, we have file "testdata.helml" contained this:
+
+A:
+ :X: 1
+ :Y: 2
+# Comment before section
+B
+ :X: 5
+ :Y: 6
+
+Core
+ :Test: data
+ :Nested key: value
+C:
+ # This is a Comment string
+ :Other: data
+
+DD: DD-Value
+D: D-value
+E: is E
+F:
+ :nested:
+  ::--: First
+  ::--: Second
+
+*/
+
+LoadHELMLfile::$add_section_comments = false; // switch off auto-comments
+
+$encoded_data = LoadHELMLfile::Load('testdata.helml', ['B:', 'C', 'D']);
+
+print_r($encoded_data)
+```
+Result string:
+```sh
+B
+:X: 5
+:Y: 6
+C:
+:Other: data
+D: D-value
+```
+In result we got data only from 'B', 'C' and 'D' sections, without comments and empty-lines
+
+In this way, it is very convenient to get sections from the root level.
+
+You can get nested keys in exactly the same way, however, it should be remembered that
+ we will get these structures without the structures in which they are located.
+
+For example, we can get ':nested' key from previous example file, and we got:
+```php
+$encoded_data = LoadHELMLfile::Load('testdata.helml', [':nested']);
+
+print_r($encoded_data);
+```
+Result:
+```sh
+:nested:
+::--: First
+::--: Second
+```
+
+The parsing of this sample will be as follows:
+```php
+(
+    [nested] => Array
+        (
+            [0] => First
+            [1] => Second
+        )
+
+)
+```
+
+Note:
+ - Specifying "`:`" at the end of the section name is optional. Inside these colons are removed.
+ - All the level colons at the beginning need to be specified if we want to get a non-root level section.
+ - Parameter `$only_first_occ`, which allows you to get all occurrences of the listed sections, if there are several of them in the file
+
+
+By setting the `$only_first_occ` parameter to `false`, you can extract all variants of the values of some nested key.
+For example, let's get all the values of the nested key X from the examples above:
+```php
+$encoded_data = LoadHELMLfile::Load('testdata.helml', [':Y'], false);
+
+print_r($encoded_data);
+```
+Result:
+```sh
+:Y: 2
+:Y: 6
+```
+
+## Independence
+
+ * Note that both classes `HELML` and `LoadHELMLfile` do not have any dependencies and can be used independently of each other.
+
 
 ## See also:
  * plugin "HELML" for Visual Studio Code

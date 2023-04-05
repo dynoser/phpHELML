@@ -50,7 +50,13 @@ class LoadHELMLfile {
         if ($req_sections_arr) {
             foreach($req_sections_arr as $st) {
                 $st = trim($st);
-                $sections_arr[$st] = strlen($st);
+                if (substr($st, 1) === ':') {
+                    // remove ":" from end of string
+                    $st = substr($st, 0, -1);
+                }
+                $l = strlen($st);
+                if (!$l) continue;
+                $sections_arr[$st] = $l;
             }
             $get_all = false;
         } else {
@@ -100,6 +106,9 @@ class LoadHELMLfile {
                     // Check one of section begin
                     foreach ($sections_arr as $sel_key => $key_len) {
                         if (substr($st, 0, $key_len) === $sel_key) {
+                            // skip strings if not contain ":" or EOL after key
+                            if (strlen($st) > $key_len && $st[$key_len] !== ':') continue;
+                            
                             $in_section_mode = true;
                             // calculate current section nesting level
                             $level = 0;
