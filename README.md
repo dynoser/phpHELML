@@ -21,11 +21,14 @@ To install HELML, simply use composer:
 composer require dynoser/helml
 ```
 
-or, You may copy and use one file HELML.php:
+or, You may copy and use files directly:
 
 ```PHP
-use dynoser\HELML\HELML;  # this directive means that the HELML class is in the namespace "dynoser\HELML"
-require_once "src/HELML.php";  # include file
+use dynoser\HELML\HELML;  # it means that the HELML class is in the namespace "dynoser\HELML"
+use dynoser\HELML\LoadHELMLfile; # it means that the LoadHELMLfile class is in the namespace "dynoser\HELML"
+require_once "src/HELML.php"; // specify the correct path to file
+require_once 'src/LoadHELMLfile.php';// or use "autoload.php" from composer to autoload
+
 ```
 
 # Usage
@@ -34,7 +37,7 @@ This package contains two independent classes:
  * class `HELML` - encoder/decoder HELML-format
  * class `LoadHELMLfile` - selective data-section loader from HELML file
 
-## class HELML
+# class HELML
 
 Here's a quick example of how to use the `HELML` class:
 
@@ -77,7 +80,7 @@ Encode and decode data arrays to/from HELML.
 
 # API
 
-### **HELML::encode**($arr, $url_mode=False)
+### **`HELML::encode`**($arr, $url_mode=False)
 
 Encode a data array into a HELML string.
 
@@ -88,7 +91,7 @@ Returns:
 
 - string: The encoded HELML string.
 
-### **HELML::decode**($src_rows)
+### **`HELML::decode`**($src_rows)
 
 Decode a HELML formatted string or list of strings into a nested dictionary.
 
@@ -99,7 +102,7 @@ Returns:
 - Array: The decoded nested array.
 
 
-## Class LoadHELMLfile
+# Class LoadHELMLfile
 
 This class implements selective loading of sections from a file in HELML format.
 

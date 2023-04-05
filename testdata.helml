@@ -1,7 +1,7 @@
 A:
  :X: 1
  :Y: 2
-# Comment before section
+# Comment before section B
 B
  :X: 5
  :Y: 6
