@@ -4,6 +4,7 @@
 
 ## PHP package
 
+* [PHP Source code -- phpHELML](https://github.com/dynoser/phpHELML)
 * [HELML format definition (en)](https://github.com/dynoser/HELML/blob/master/docs/README-HELML_en.md)
 * [Описание формата HELML (ru)](https://github.com/dynoser/HELML/blob/master/docs/README-HELML_ru.md)
 
@@ -20,7 +21,7 @@ To install HELML, simply use composer:
 composer require dynoser/helml
 ```
 
-or, You may copy and use file HELML.php:
+or, You may copy and use one file HELML.php:
 
 ```PHP
 use dynoser\HELML\HELML;  # this directive means that the HELML class is in the namespace "dynoser\HELML"
