@@ -168,6 +168,8 @@ class HELML {
         $result = [];
         $stack = [];
 
+        $min_level = -1;
+        
         // Loop through each line in the input array
         foreach ($str_arr as $line) {
             $line = trim($line);
@@ -191,9 +193,18 @@ class HELML {
             $key = $parts[0] ? $parts[0] : 0;
             $value = isset($parts[1]) ? $parts[1] : null;
 
-            // Remove keys from the stack until it matches the current level
-            while (count($stack) > $level) {
-                array_pop($stack);
+            // check min_level
+            if ($min_level < 0 || $min_level > $level) {
+                $min_level = $level;
+            }
+
+            // Remove keys from the stack if level decreased
+            $extra_keys_cnt = count($stack) - ($level - $min_level);
+            if ($extra_keys_cnt > 0) {
+                // removing extra keys from stack
+                 while(count($stack) && $extra_keys_cnt--) {
+                    array_pop($stack);
+                 }
                 $layer_curr = $layer_init;
             }
 
