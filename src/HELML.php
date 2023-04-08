@@ -31,7 +31,7 @@ class HELML {
     public static $CUSTOM_VALUE_DECODER = null;
     
     public static $ENABLE_BONES = true;
-    public static $ENABLE_SPC_IDENT = true;
+    public static $ENABLE_SPC_IDENT = 1;
 
     /**
      * Encode array to HELML string
@@ -108,7 +108,7 @@ class HELML {
             
             // add space-ident to the left of the key (if need)
             if (self::$ENABLE_SPC_IDENT && ' ' === $spc_ch) {
-                $key = str_repeat($spc_ch, $level) . $key;
+                $key = str_repeat($spc_ch, $level * self::$ENABLE_SPC_IDENT) . $key;
             }
 
             if (is_array($value)) {
