@@ -51,9 +51,7 @@ class HELML {
         $spc_ch = $url_mode ? '_' : ' ';
         self::_encode($arr, $results_arr, 0, $lvl_ch, $spc_ch, self::isArrayList($arr));
 
-        if ($url_mode && count($results_arr) === 1) {
-            // Add empty string in URL mode if results contain only one string
-            // This is necessary in order to add the ~ symbol to the results.
+        if ($url_mode) {
             $results_arr[] = '';
         }
         return implode($str_imp, $results_arr);
@@ -152,7 +150,7 @@ class HELML {
         } elseif (is_string($src_rows)) {
             foreach(["\n", "\r", "~"] as $exploder_ch) {
                 if (false !== strpos($src_rows, $exploder_ch)) {
-                    if ("~" === $exploder_ch) {
+                    if ("~" === $exploder_ch && substr($src_rows, -1) === '~') {
                         $lvl_ch = '.';
                         $spc_ch = '_';
                     }
