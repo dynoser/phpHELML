@@ -1,12 +1,13 @@
 <?php
 namespace dynoser\HELML;
-/*
- * This code represents a PHP implementation of the HELML class without dependencies.
- * 
- * The class provides functions for encoding and decoding data in the HELML format.
- * 
+
+/**
+ * This class contain HELML-decoder only
+ * (functional extracted from HELML-class)
+ *
+ * @author AlexandrS
  */
-class HELML {
+class HELMLdecoder {
 
     // Custom user-specified values may be added here:
     public static $SPEC_TYPE_VALUES = [
@@ -20,120 +21,13 @@ class HELML {
     ];
 
     //Custom hooks below (set callable if need)
-    
+
     // Hook for decode "  Value"
     public static $CUSTOM_FORMAT_DECODER = null;
-
+    
     // Default value decoder is self::decodeValue, may be replace here
     public static $CUSTOM_VALUE_DECODER = null;
-        
-    // Default value encoder is self::encodeValue, may be replaced here
-    public static $CUSTOM_VALUE_ENCODER = null;
-
-    public static $ENABLE_BONES = true;
-    public static $ENABLE_SPC_IDENT = 1;
-
-    /**
-     * Encode array to HELML string
-     *
-     * @param array $arr
-     * @param integer $one_line_mode 0-multi-lines, 1-URL-mode, 2-oneLine-mode
-     * @return string
-     * @throws InvalidArgumentException
-     */
-    public static function encode($arr, $one_line_mode = 0) {
-        $results_arr = [];
-        if (!is_array($arr)) {
-            throw new InvalidArgumentException("Array required");
-        }
-
-        $url_mode = ($one_line_mode == 1);
-        $str_imp = $one_line_mode ? "~" : "\n";
-        $lvl_ch = $url_mode ? '.' : ':';
-        $spc_ch = $url_mode ? '_' : ' ';
-
-        self::_encode($arr, $results_arr, 0, $lvl_ch, $spc_ch, self::isArrayList($arr));
-
-        if ($url_mode) {
-            $results_arr[] = '';
-        } elseif ($one_line_mode) {
-            array_map('trim', $results_arr); // remove left spaces
-            array_filter($results_arr, function($el) { return strlen($el) > 0 && $el[0] !== '#'; }); // remove empty and comment lines
-        }
-        return implode($str_imp, $results_arr);
-    }
-
-    /**
-     * Recursive helper function to process each key-value pair in the input array
-     * 
-     * @param array $arr
-     * @param array &$results_arr
-     * @param int $level
-     * @param string $lvl_ch
-     * @param string $spc_ch
-     * @param int $is_list
-     */
-    public static function _encode(
-        $arr,
-        &$results_arr,
-        $level = 0,
-        $lvl_ch = ':',
-        $spc_ch = ' ',
-        $is_list = 0
-    ) {
-        foreach ($arr as $key => $value) {
-
-            // Use auto-increment key index if possible
-            if ($is_list && self::$ENABLE_BONES) {
-                $key = '--';
-            } else if (!$is_list) {
-                // Encode $key in base64url if it contains unwanted characters
-                if (strlen($key)) {
-                    $fc = substr($key, 0, 1);
-                    $lc = substr($key, -1, 1);
-                    if ('#' === $fc  || $fc === $spc_ch || $fc === ' ' || $lc === $spc_ch || $lc === ' ' || false !== strpos($key, $lvl_ch)) {
-                        $fc = '-';
-                    } else {
-                        $pattern = ($spc_ch == '_') ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u';
-                        if (!preg_match($pattern, $key)) {
-                            $fc = '-';
-                        }
-                    }
-                    if ('-' === $fc) {
-                        // Add "-" to the beginning of the key to indicate it's in base64url
-                        $key = '-' . self::base64Uencode($key);
-                    }
-                } else {
-                    $key = '-';
-                }
-                
-            }
-
-            // Add the appropriate number of colons to the left of the key, based on the current level
-            $key = str_repeat($lvl_ch, $level) . $key;
-            
-            // add space-ident to the left of the key (if need)
-            if (self::$ENABLE_SPC_IDENT && ' ' === $spc_ch) {
-                $key = str_repeat($spc_ch, $level * self::$ENABLE_SPC_IDENT) . $key;
-            }
-
-            if (is_array($value)) {
-                $is_num_keys = self::isArrayList($value);
-                if ($is_num_keys) {
-                    $key .= $lvl_ch;
-                }
-                // If the value is an array, call this function recursively and increase the level
-                $results_arr[] = $key;
-                self::_encode($value, $results_arr, $level + 1, $lvl_ch, $spc_ch, $is_num_keys);
-            } else {
-                // If the value is not an array, run it through a value encoding function, if one is specified
-                $value = null === self::$CUSTOM_VALUE_ENCODER ? self::valueEncoder($value, $spc_ch) : call_user_func(self::$CUSTOM_VALUE_ENCODER, $value);
-                // Add the key:value pair to the output
-                $results_arr[] = $key . $lvl_ch . $value;
-            }
-        }
-    }
-
+    
     /**
      * Decode a HELML-formatted string or array into an associative array
      * 
@@ -259,61 +153,6 @@ class HELML {
     }
     
     /**
-     * Encode a value based on its type and add any necessary prefixes
-     * 
-     * @param string $value
-     * @param string $spc_ch
-     * @return any
-     * @throws InvalidArgumentException
-     */
-    public static function valueEncoder($value, $spc_ch = ' ') {
-        $type = gettype($value);
-        switch ($type) {
-            case 'string':
-                if (!strlen($value)) {
-                    return '-';
-                }
-                $fc = $value[0];
-                $lc = substr($value, -1);
-
-                if (!preg_match(($spc_ch == '_') ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u', $value)) {
-                    $fc = '-';
-                }
-                if ($fc === '-') {
-                    return '-' . self::base64Uencode($value);
-                } elseif ($spc_ch === $fc || ' ' === $fc ||  $spc_ch === $lc || ctype_space($lc)) {
-                    // for empty strings or those that have spaces at the beginning or end
-                    return "'" . $value . "'";
-                }
-                // if the value is simple, just add one space at the beginning
-                return $spc_ch . $value;
-
-            case 'boolean':
-                return $spc_ch . $spc_ch . ($value ? 'T' : 'F');
-
-            case 'NULL':
-                return $spc_ch . $spc_ch . 'N';
-
-            case 'double':
-            case 'float':
-                if (is_nan($value)) {
-                    return $spc_ch . $spc_ch . 'NAN';
-                } elseif (is_infinite($value)) {
-                    return $spc_ch . $spc_ch . ($value > 0 ? 'INF' : 'NIF');
-                }
-                if ('_' === $spc_ch) {
-                    // for url-mode because dot-inside
-                    return '-' . self::base64Uencode((string)$value);
-                }
-                // if not url mode, go below
-            case 'integer':
-                return $spc_ch . $spc_ch . $value;
-            default:
-                throw new InvalidArgumentException("Cannot encode value of type $type");
-        }
-    }
-
-    /**
      * Decode an encoded value based on its prefix
      * 
      * @param string $encodedValue
@@ -360,43 +199,9 @@ class HELML {
         
         return self::base64Udecode($encodedValue);
     }
-    
+
     /**
-     * if the array is a list with keys 0,1,2..,
-     * then returns the number of elements
-     * otherwise returns 0
-     * 
-     * @param array $arr
-     * @param int $expected_count
-     * @return int
-     */
-    public static function isArrayList(&$arr, $expected_count = false)
-    {
-        if (!array_key_exists(0, $arr))
-            return 0;
-        $el_count = count($arr);
-        if ($expected_count && ($el_count != $expected_count))
-            return 0;
-        for($i = 1; $i < $el_count; $i++) {
-            if (!array_key_exists($i, $arr))
-                return 0;
-        }
-        return $el_count;
-    }
-    
-    /**
-     * Encode a string using the base64url encoding scheme
-     * 
-     * @param string $str
-     * @return string
-     */
-    public static function base64Uencode($str) {
-        $enc = base64_encode($str);
-        return rtrim(strtr($enc, '+/', '-_'), '=');
-    }
-    
-    /**
-     * Decode a base64url encoded string
+     * Decode a base64-url encoded string
      * 
      * @param string $str
      * @return string
