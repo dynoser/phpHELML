@@ -37,22 +37,28 @@ class HELML {
      * Encode array to HELML string
      *
      * @param array $arr
-     * @param bool $url_mode
+     * @param integer $one_line_mode 0-multi-lines, 1-URL-mode, 2-oneLine-mode
      * @return string
      * @throws InvalidArgumentException
      */
-    public static function encode($arr, $url_mode = false) {
+    public static function encode($arr, $one_line_mode = 0) {
         $results_arr = [];
         if (!is_array($arr)) {
             throw new InvalidArgumentException("Array required");
         }
-        $str_imp = $url_mode ? "~" : "\n";
+
+        $url_mode = ($one_line_mode == 1);
+        $str_imp = $one_line_mode ? "~" : "\n";
         $lvl_ch = $url_mode ? '.' : ':';
         $spc_ch = $url_mode ? '_' : ' ';
+
         self::_encode($arr, $results_arr, 0, $lvl_ch, $spc_ch, self::isArrayList($arr));
 
         if ($url_mode) {
             $results_arr[] = '';
+        } elseif ($one_line_mode) {
+            array_map('trim', $results_arr); // remove left spaces
+            array_filter($results_arr, function($el) { return strlen($el) > 0 && $el[0] !== '#'; }); // remove empty and comment lines
         }
         return implode($str_imp, $results_arr);
     }
