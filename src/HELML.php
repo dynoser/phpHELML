@@ -7,6 +7,9 @@ namespace dynoser\HELML;
  * 
  */
 class HELML {
+    // *** This class was automaticaly extracted from HELML class source by SectMan Sections Manager.
+    // *** This class contains full functionality HELML encoding and decoding, but is not source code
+    // *** source code of this file you can see here: https://github.com/dynoser/HELML/blob/master/PHP/HELML.php
 
     // Custom user-specified values may be added here:
     public static $SPEC_TYPE_VALUES = [
