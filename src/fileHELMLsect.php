@@ -4,9 +4,11 @@ namespace dynoser\HELML;
 /**
  * This class implements selective loading of sections from a file in HELML format
  */
-class LoadHELMLfile {
+class fileHELMLsect {
     
     public static $add_section_comments = true;
+    
+    public static $last_line_num = -1; // will contain last line number after load complete
     
     /**
      * The $fileName parameter must contain the path to the file to be opened.
@@ -27,27 +29,25 @@ class LoadHELMLfile {
      * @param string $fileName HELML-file path
      * @param array|string $sections_arr Array of strings, or comma-separated string
      * @param bool $only_first_occ Default true
+     * @param string|null $only_prefix_str If specified, it will skip all lines that do not have this prefix.
      * @return string
      */
-    public static function Load($fileName, $sections_arr = [], $only_first_occ = true) {
-        if (!is_array($sections_arr)) {
-            if (!is_string($sections_arr)) {
-                throw new InvalidArgumentException("Parameter sections_arr must be array(of string) or string(comma-separated)");
-            }
+    public static function Load($fileName, $sections_arr = [], $only_first_occ = true, $only_prefix_str = null) {
+        if ($sections_arr && is_string($sections_arr)) {
             $sections_arr = $sections_arr ? explode(',', $sections_arr) : [];
         }
-        $results_arr = self::_LoadSections($fileName, $sections_arr, $only_first_occ);
+        $results_arr = self::_LoadSections($fileName, $sections_arr, $only_first_occ, $only_prefix_str);
         return implode("\n", $results_arr);
     }
 
-    public static function _LoadSections($fileName, $req_sections_arr = [], $only_first_occ = false) {
+    public static function _LoadSections($fileName, $req_sections_arr = [], $only_first_occ = false, $only_prefix_str = null) {
 
         // Prepare $sections_arr
         $sections_arr = [];
-        if (!is_array($req_sections_arr)) {
-            throw new InvalidArgumentException("Parameter sections_arr must be array");
-        }
         if ($req_sections_arr) {
+            if (!is_array($req_sections_arr)) {
+                throw new InvalidArgumentException("Parameter sections_arr must be array");
+            }
             foreach($req_sections_arr as $st) {
                 $st = trim($st);
                 if (substr($st, 1) === ':') {
@@ -62,9 +62,13 @@ class LoadHELMLfile {
         } else {
             $get_all = true;
         }
+        
+        // Prepare $only_prefix_len
+        $only_prefix_len = $only_prefix_str ? strlen($only_prefix_str) : 0;
 
         // Results will be posted here
         $results_arr = [];
+        $str_num = -1; // String numbers will be counted and placed in the keys of the result array
 
         // Open source file
         $f = fopen($fileName, 'rb');
@@ -72,7 +76,7 @@ class LoadHELMLfile {
             // Can't read file
             return NULL;
         }
-
+        
         $in_section_mode = false; // Section read mode (default off)
         $sel_key = ''; // Current section name
         $level = 0; // Current section level
@@ -80,10 +84,20 @@ class LoadHELMLfile {
         while (!feof($f)) {
             $st = fgets($f);
             if (false === $st) break; // break on err
-            $st = trim($st);
-             // Skip empty strings and comments
-            if (!strlen($st) || '#' === $st[0]) continue;
+            
+            $str_num++;
 
+            $st = trim($st);
+
+            // skip lines not matching $only_prefix_str (if specified)
+            if ($only_prefix_len) {
+                if (substr($st, 0, $only_prefix_len) !== $only_prefix_str) continue;
+                $st = substr($st, $only_prefix_len);
+            }
+
+            // Skip empty strings and comments
+            if (!strlen($st) || '#' === $st[0]) continue;
+            
             if (!$get_all) {
                 if ($in_section_mode) {
                     // Calculate level of current string
@@ -128,9 +142,15 @@ class LoadHELMLfile {
                     continue;
                 }
             }
-            $results_arr[] = $st;
+            if (self::$add_section_comments) {
+                $results_arr[] = $st;
+            } else {
+                $results_arr[$str_num] = $st;
+            }
         }
         fclose($f);
+        
+        self::$last_line_num = $str_num;
         
         if ($only_first_occ && self::$add_section_comments && !empty($sections_arr)) {
             $results_arr[] = '# These requested sections were not found:';

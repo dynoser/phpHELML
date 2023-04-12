@@ -1,11 +1,10 @@
 <?php
 namespace dynoser\HELML;
-
-/**
- * This class contain HELML-decoder only
- * (functional extracted from HELML-class)
- *
- * @author AlexandrS
+/*
+ * This code represents a PHP implementation of the HELMLdecoder class without dependencies.
+ * 
+ * The class provides functions for decoding HELML-formated data.
+ * 
  */
 class HELMLdecoder {
 
@@ -21,13 +20,13 @@ class HELMLdecoder {
     ];
 
     //Custom hooks below (set callable if need)
-
+    
     // Hook for decode "  Value"
     public static $CUSTOM_FORMAT_DECODER = null;
-    
+
     // Default value decoder is self::decodeValue, may be replace here
     public static $CUSTOM_VALUE_DECODER = null;
-    
+
     /**
      * Decode a HELML-formatted string or array into an associative array
      * 
@@ -151,7 +150,7 @@ class HELMLdecoder {
         // Return the result array
         return $result;
     }
-    
+
     /**
      * Decode an encoded value based on its prefix
      * 
@@ -199,9 +198,9 @@ class HELMLdecoder {
         
         return self::base64Udecode($encodedValue);
     }
-
+    
     /**
-     * Decode a base64-url encoded string
+     * Decode a base64url encoded string
      * 
      * @param string $str
      * @return string

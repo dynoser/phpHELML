@@ -3,7 +3,7 @@ namespace dynoser\HELML;
 /*
  * This code represents a PHP implementation of the HELML class without dependencies.
  * 
- * The class provides functions for encoding and decoding data in the HELML format.
+ * The class provides functions for encoding and decoding HELML-formated data.
  * 
  */
 class HELML {
@@ -119,7 +119,7 @@ class HELML {
 
             if (is_array($value)) {
                 $is_num_keys = self::isArrayList($value);
-                if ($is_num_keys) {
+                if (!$is_num_keys) {
                     $key .= $lvl_ch;
                 }
                 // If the value is an array, call this function recursively and increase the level
@@ -257,7 +257,7 @@ class HELML {
         // Return the result array
         return $result;
     }
-    
+
     /**
      * Encode a value based on its type and add any necessary prefixes
      * 
@@ -360,7 +360,7 @@ class HELML {
         
         return self::base64Udecode($encodedValue);
     }
-    
+
     /**
      * if the array is a list with keys 0,1,2..,
      * then returns the number of elements
@@ -383,7 +383,7 @@ class HELML {
         }
         return $el_count;
     }
-    
+
     /**
      * Encode a string using the base64url encoding scheme
      * 

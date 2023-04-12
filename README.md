@@ -25,9 +25,9 @@ or, You may copy and use files directly:
 
 ```PHP
 use dynoser\HELML\HELML;  # it means that the HELML class is in the namespace "dynoser\HELML"
-use dynoser\HELML\LoadHELMLfile; # it means that the LoadHELMLfile class is in the namespace "dynoser\HELML"
+use dynoser\HELML\fileHELMLsect; # it means that the fileHELMLsect class is in the namespace "dynoser\HELML"
 require_once "src/HELML.php"; // specify the correct path to file
-require_once 'src/LoadHELMLfile.php';// or use "autoload.php" from composer to autoload
+require_once 'src/fileHELMLsect.php';// or use "autoload.php" from composer to autoload
 
 ```
 
@@ -35,7 +35,7 @@ require_once 'src/LoadHELMLfile.php';// or use "autoload.php" from composer to a
 
 This package contains two independent classes:
  * class `HELML` - encoder/decoder HELML-format
- * class `LoadHELMLfile` - selective data-section loader from HELML file
+ * class `fileHELMLsect` - selective data-section loader from HELML file
 
 # class HELML
 
@@ -102,14 +102,14 @@ Returns:
 - Array: The decoded nested array.
 
 
-# Class LoadHELMLfile
+# Class fileHELMLsect
 
 This class implements selective loading of sections from a file in HELML format.
 
 ```PHP
-use dynoser\HELML\LoadHELMLfile;
+use dynoser\HELML\fileHELMLsect;
 
-require_once 'src/LoadHELMLfile.php';// path to file, or require "autoload.php"
+require_once 'src/fileHELMLsect.php';// path to file, or require "autoload.php"
 
 /*
 For example, we have file "testdata.helml" contained this:
@@ -139,9 +139,9 @@ F:
 
 */
 
-LoadHELMLfile::$add_section_comments = false; // switch off auto-comments
+fileHELMLsect::$add_section_comments = false; // switch off auto-comments
 
-$encoded_data = LoadHELMLfile::Load('testdata.helml', ['B:', 'C', 'D']);
+$encoded_data = fileHELMLsect::Load('testdata.helml', ['B:', 'C', 'D']);
 
 print_r($encoded_data)
 ```
@@ -163,7 +163,7 @@ You can get nested keys in exactly the same way, however, it should be remembere
 
 For example, we can get ':nested' key from previous example file, and we got:
 ```php
-$encoded_data = LoadHELMLfile::Load('testdata.helml', [':nested']);
+$encoded_data = fileHELMLsect::Load('testdata.helml', [':nested']);
 
 print_r($encoded_data);
 ```
@@ -195,7 +195,7 @@ Note:
 By setting the `$only_first_occ` parameter to `false`, you can extract all variants of the values of some nested key.
 For example, let's get all the values of the nested key X from the examples above:
 ```php
-$encoded_data = LoadHELMLfile::Load('testdata.helml', [':Y'], false);
+$encoded_data = fileHELMLsect::Load('testdata.helml', [':Y'], false);
 
 print_r($encoded_data);
 ```
@@ -207,7 +207,7 @@ Result:
 
 ## Independence
 
- * Note that both classes `HELML` and `LoadHELMLfile` do not have any dependencies and can be used independently of each other.
+ * Note that both classes `HELML` and `fileHELMLsect` do not have any dependencies and can be used independently of each other.
 
 
 ## See also:
