@@ -72,8 +72,9 @@ class HELMLdecoder {
         $min_level = -1;
         
         // Loop through each line in the input array
-        foreach ($str_arr as $line) {
-            $line = \trim($line);
+        $lines_cnt = \count($str_arr);
+        for ($lnum = 0; $lnum < $lines_cnt; $lnum++) {
+            $line = \trim($str_arr[$lnum]);
 
             // Skip empty lines and comment lines starting with '#'
             if (!\strlen($line) || \substr($line, 0, 1) === '#') continue;
@@ -139,8 +140,25 @@ class HELMLdecoder {
                 $parent[$key] = [];
                 \array_push($stack, $key);
             } elseif (\array_key_exists($layer_curr, $layers_list)) {
-                // Use default valueDecoder or custom decoder function is specified
-                $value = \is_null(self::$CUSTOM_VALUE_DECODER) ? self::valueDecoder($value, $spc_ch) : \call_user_func(self::$CUSTOM_VALUE_DECODER, $value, $spc_ch);
+                // multistring literal
+                if ($value === '`') {
+                    $value = [];
+                    for($cln = $lnum + 1; $cln < $lines_cnt; $cln++) {
+                        $line = $str_arr[$cln];
+                        if ($line === '`') {
+                            $value = \implode("\n", $value);
+                            $lnum = $cln;
+                            break;
+                        }
+                        $value[] = $line;
+                    }
+                    if (!\is_string($value)) {
+                        $value = '`ERR`';
+                    }
+                } else {
+                    // Use default valueDecoder or custom decoder function is specified
+                    $value = \is_null(self::$CUSTOM_VALUE_DECODER) ? self::valueDecoder($value, $spc_ch) : \call_user_func(self::$CUSTOM_VALUE_DECODER, $value, $spc_ch);
+                }
                
                 // Add the key-value pair to the current array
                 $parent[$key] = $value;
