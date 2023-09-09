@@ -94,7 +94,7 @@ class HELML {
                 if (\strlen($key)) {
                     $fc = \substr($key, 0, 1);
                     $lc = \substr($key, -1, 1);
-                    if ('#' === $fc  || $fc === $spc_ch || $fc === ' ' || $lc === $spc_ch || $lc === ' ' || false !== \strpos($key, $lvl_ch)) {
+                    if (('#' === $fc && !$level) || $fc === $spc_ch || $fc === ' ' || $lc === $spc_ch || $lc === ' ' || false !== \strpos($key, $lvl_ch)) {
                         $fc = '-';
                     } else {
                         $pattern = ($spc_ch == '_') ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u';
@@ -178,8 +178,9 @@ class HELML {
         $min_level = -1;
         
         // Loop through each line in the input array
-        foreach ($str_arr as $line) {
-            $line = \trim($line);
+        $lines_cnt = \count($str_arr);
+        for ($lnum = 0; $lnum < $lines_cnt; $lnum++) {
+            $line = \trim($str_arr[$lnum]);
 
             // Skip empty lines and comment lines starting with '#'
             if (!\strlen($line) || \substr($line, 0, 1) === '#') continue;
@@ -245,8 +246,25 @@ class HELML {
                 $parent[$key] = [];
                 \array_push($stack, $key);
             } elseif (\array_key_exists($layer_curr, $layers_list)) {
-                // Use default valueDecoder or custom decoder function is specified
-                $value = \is_null(self::$CUSTOM_VALUE_DECODER) ? self::valueDecoder($value, $spc_ch) : \call_user_func(self::$CUSTOM_VALUE_DECODER, $value, $spc_ch);
+                // multistring literal
+                if ($value === '`') {
+                    $value = [];
+                    for($cln = $lnum + 1; $cln < $lines_cnt; $cln++) {
+                        $line = $str_arr[$cln];
+                        if ($line === '`') {
+                            $value = \implode("\n", $value);
+                            $lnum = $cln;
+                            break;
+                        }
+                        $value[] = $line;
+                    }
+                    if (!\is_string($value)) {
+                        $value = '`ERR`';
+                    }
+                } else {
+                    // Use default valueDecoder or custom decoder function is specified
+                    $value = \is_null(self::$CUSTOM_VALUE_DECODER) ? self::valueDecoder($value, $spc_ch) : \call_user_func(self::$CUSTOM_VALUE_DECODER, $value, $spc_ch);
+                }
                
                 // Add the key-value pair to the current array
                 $parent[$key] = $value;
@@ -278,6 +296,12 @@ class HELML {
                 }
                 $fc = $value[0];
                 $lc = \substr($value, -1);
+
+                // try multi-string literal
+                if (false !== \strpos($value, "\n") && $lc !== '`'  && \function_exists('mb_check_encoding')
+                    && \mb_check_encoding($string, 'UTF-8') && !\preg_match("/`\x0d|`\x0a/", $value)) {
+                        return "`\n" . $value . "\n`";
+                }
 
                 if (!\preg_match(($spc_ch === '_') ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u', $value)) {
                     $fc = '-';
