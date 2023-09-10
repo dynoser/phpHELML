@@ -35,6 +35,8 @@ class HELML {
 
     public static $ENABLE_BONES = true;
     public static $ENABLE_SPC_IDENT = 1;
+    public static $ENABLE_KEY_UPLINES = true; //add empty line before create-array-keys
+    public static $ENABLE_HASHSYMBOLS = false; // adding # after nested-blocks
 
     /**
      * Encode array to HELML string
@@ -121,13 +123,23 @@ class HELML {
             }
 
             if (\is_array($value)) {
+                // Add empty line before create-key
+                if (self::$ENABLE_KEY_UPLINES && ' ' === $spc_ch) {
+                    $results_arr[] = '';
+                }
+
                 $is_num_keys = self::isArrayList($value);
                 if (!$is_num_keys) {
                     $key .= $lvl_ch;
                 }
+
                 // If the value is an array, call this function recursively and increase the level
                 $results_arr[] = $key;
                 self::_encode($value, $results_arr, $level + 1, $lvl_ch, $spc_ch, $is_num_keys);
+
+                if (self::$ENABLE_KEY_UPLINES && ' ' === $spc_ch) {
+                    $results_arr[] = \str_repeat($spc_ch, $level) . '#';
+                }
             } else {
                 // If the value is not an array, run it through a value encoding function, if one is specified
                 $value = null === self::$CUSTOM_VALUE_ENCODER ? self::valueEncoder($value, $spc_ch) : \call_user_func(self::$CUSTOM_VALUE_ENCODER, $value);
@@ -299,7 +311,7 @@ class HELML {
 
                 // try multi-string literal
                 if (false !== \strpos($value, "\n") && $lc !== '`'  && \function_exists('mb_check_encoding')
-                    && \mb_check_encoding($string, 'UTF-8') && !\preg_match("/`\x0d|`\x0a/", $value)) {
+                    && \mb_check_encoding($value, 'UTF-8') && !\preg_match("/`\x0d|`\x0a/", $value)) {
                         return "`\n" . $value . "\n`";
                 }
 
