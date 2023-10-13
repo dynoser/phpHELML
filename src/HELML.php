@@ -6,6 +6,7 @@ namespace dynoser\HELML;
  * The class provides functions for encoding and decoding HELML-formated data.
  * 
  */
+
 class HELML {
     // *** This class was automaticaly extracted from HELML class source by SectMan Sections Manager.
     // *** This class contains full functionality HELML encoding and decoding, but is not source code
@@ -262,7 +263,7 @@ class HELML {
                 if ($value === '`') {
                     $value = [];
                     for($cln = $lnum + 1; $cln < $lines_cnt; $cln++) {
-                        $line = $str_arr[$cln];
+                        $line = \trim($str_arr[$cln],"\r\n\x00");
                         if ($line === '`') {
                             $value = \implode("\n", $value);
                             $lnum = $cln;
