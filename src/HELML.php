@@ -50,7 +50,7 @@ class HELML {
     public static function encode($arr, $one_line_mode = 0) {
         $results_arr = [];
         if (!\is_array($arr)) {
-            throw new InvalidArgumentException("Array required");
+            throw new \InvalidArgumentException("Array required");
         }
 
         $url_mode = ($one_line_mode == 1);
@@ -247,7 +247,7 @@ class HELML {
                     }
                     continue;
                 } else {
-                    $decoded_key = self::base64Udecode(substr($key, 1));
+                    $decoded_key = self::base64Udecode(\substr($key, 1));
                     if (false !== $decoded_key) {
                         $key = $decoded_key;
                     }
@@ -390,7 +390,7 @@ class HELML {
             }
             return \stripcslashes($encodedValue);
         } elseif ('-' === $first_char) {
-            return self::base64Udecode(substr($encodedValue, 1));
+            return self::base64Udecode(\substr($encodedValue, 1));
         }
 
         // if there are no spaces or quotes or "-" at the beginning
