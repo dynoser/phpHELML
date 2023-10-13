@@ -144,7 +144,7 @@ class HELMLdecoder {
                 if ($value === '`') {
                     $value = [];
                     for($cln = $lnum + 1; $cln < $lines_cnt; $cln++) {
-                        $line = $str_arr[$cln];
+                        $line = \trim($str_arr[$cln],"\r\n\x00");
                         if ($line === '`') {
                             $value = \implode("\n", $value);
                             $lnum = $cln;
