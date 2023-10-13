@@ -45,16 +45,16 @@ class fileHELMLsect {
         // Prepare $sections_arr
         $sections_arr = [];
         if ($req_sections_arr) {
-            if (!is_array($req_sections_arr)) {
-                throw new InvalidArgumentException("Parameter sections_arr must be array");
+            if (!\is_array($req_sections_arr)) {
+                throw new \InvalidArgumentException("Parameter sections_arr must be array");
             }
             foreach($req_sections_arr as $st) {
-                $st = trim($st);
-                if (substr($st, 1) === ':') {
+                $st = \trim($st);
+                if (\substr($st, 1) === ':') {
                     // remove ":" from end of string
-                    $st = substr($st, 0, -1);
+                    $st = \substr($st, 0, -1);
                 }
-                $l = strlen($st);
+                $l = \strlen($st);
                 if (!$l) continue;
                 $sections_arr[$st] = $l;
             }
@@ -64,14 +64,14 @@ class fileHELMLsect {
         }
         
         // Prepare $only_prefix_len
-        $only_prefix_len = $only_prefix_str ? strlen($only_prefix_str) : 0;
+        $only_prefix_len = $only_prefix_str ? \strlen($only_prefix_str) : 0;
 
         // Results will be posted here
         $results_arr = [];
         $str_num = -1; // String numbers will be counted and placed in the keys of the result array
 
         // Open source file
-        $f = fopen($fileName, 'rb');
+        $f = \fopen($fileName, 'rb');
         if (!$f) {
             // Can't read file
             return NULL;
@@ -81,28 +81,53 @@ class fileHELMLsect {
         $sel_key = ''; // Current section name
         $level = 0; // Current section level
 
-        while (!feof($f)) {
-            $st = fgets($f);
+        while (!\feof($f)) {
+            $st = \fgets($f);
             if (false === $st) break; // break on err
             
             $str_num++;
 
-            $st = trim($st);
+            $st = \trim($st);
 
             // skip lines not matching $only_prefix_str (if specified)
             if ($only_prefix_len) {
-                if (substr($st, 0, $only_prefix_len) !== $only_prefix_str) continue;
-                $st = substr($st, $only_prefix_len);
+                if (\substr($st, 0, $only_prefix_len) !== $only_prefix_str) {
+                    continue;
+                }
+                $st = \trim(\substr($st, $only_prefix_len));
             }
 
             // Skip empty strings and comments
-            if (!strlen($st) || '#' === $st[0]) continue;
+            if (!\strlen($st) || '#' === $st[0]) {
+                continue;
+            }
             
+            // multi-string literal
+            if (\substr($st, -2) === ':`') {
+                $lvl_st = 0;
+                while (\substr($st, $lvl_st, 1) === ':') {
+                    $lvl_st++;
+                }
+                if (\strpos($st, ':', $lvl_st) === \strlen($st) - 2) {
+                    while(!\feof($f)) {
+                        $addst = \fgets($f);
+                        if (false === $addst) break 2;
+                        $addst = \trim($addst,"\r\n\x00");
+                        if ($addst === '`') break;
+                        if ($only_prefix_len && (\substr($addst, 0, $only_prefix_len) === $only_prefix_str)) {
+                            $addst = \trim(\substr($addst, $only_prefix_len));
+                        }
+                        if ($addst === '`') break;
+                        $st .= "\n" . $addst;
+                    }
+                }
+            }
+
             if (!$get_all) {
                 if ($in_section_mode) {
                     // Calculate level of current string
                     $lvl_st = 0;
-                    while (substr($st, $lvl_st, 1) === ':') {
+                    while (\substr($st, $lvl_st, 1) === ':') {
                         $lvl_st++;
                     }
                     // section end check
@@ -119,14 +144,14 @@ class fileHELMLsect {
                     if (empty($sections_arr)) break;
                     // Check one of section begin
                     foreach ($sections_arr as $sel_key => $key_len) {
-                        if (substr($st, 0, $key_len) === $sel_key) {
+                        if (\substr($st, 0, $key_len) === $sel_key) {
                             // skip strings if not contain ":" or EOL after key
-                            if (strlen($st) > $key_len && $st[$key_len] !== ':') continue;
+                            if (\strlen($st) > $key_len && $st[$key_len] !== ':') continue;
                             
                             $in_section_mode = true;
                             // calculate current section nesting level
                             $level = 0;
-                            while (substr($st, $level, 1) === ':') {
+                            while (\substr($st, $level, 1) === ':') {
                                 $level++;
                             }
                             if (self::$add_section_comments) {
@@ -148,7 +173,7 @@ class fileHELMLsect {
                 $results_arr[$str_num] = $st;
             }
         }
-        fclose($f);
+        \fclose($f);
         
         self::$last_line_num = $str_num;
         
