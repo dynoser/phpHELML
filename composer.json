@@ -16,5 +16,10 @@
         "psr-4": {
             "dynoser\\HELML\\": "src/"
         }
+    },
+    "extra": {
+        "dyno-aliases": {
+            "dynoser/tools/HELML": "dynoser/HELML/HELML"
+        }
     }
 }
