@@ -1,0 +1,6 @@
+hashsig: a8ddb1baaa56cd5dc21d36a891e2504088fb9709ff23887e47e603edebcfed24 ~ filescnt: 5 ~ hashalg: sha256 ~ signalg: ed25519 ~ pubkey: EkDohf20jN/9kXW/WL3ZXo245ggek9TiTWzzmBriMTU= ~ signature: iI/BWfznTxtZFw7jAOQPlYN9iEfVipxzfy4/tV1Q19ZdVZAuWkeRmeeydkDUAH53TU+v8vhzlPRDyJxi0Ss4BQ==
+composer.json: f593800d778b205292c36409f30d160879252a78b4aee524b3bdfd57c33ba780 631
+README.md: 9e20320d2a4caa034774b8e838013abcda0839f5b2dc829e9f0996889b82ec7c 5384
+src/fileHELMLsect.php: a8e4407435b338b90a32b7375c405ec5ed37cad119af2c4073d4131b854e9016 8097
+src/HELML.php: 773c853440b3ec8d793a0478f07367b827c128f8cfdb775258365bab0b2b8fb0 17438
+src/HELMLdecoder.php: be88ea3ce4cedc1c095592ed6d47322d5c1e787b8c20e74f702af97372e38bd4 9296
