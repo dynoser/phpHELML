@@ -67,7 +67,6 @@ class HELMLmicro
                  while(\count($stack) && $extra_keys_cnt--) {
                      \array_pop($stack);
                  }
-                $layer_curr = $layer_init;
             }
 
             $parent = &$result;
@@ -89,7 +88,7 @@ class HELMLmicro
             if (\is_null($value) || !\strlen($value)) {
                 $parent[$key] = [];
                 \array_push($stack, $key);
-            } elseif (\array_key_exists($layer_curr, $layers_list)) {
+            } else {
                 if ($value === '`') {
                     $value = [];
                     for($cln = $lnum + 1; $cln < $lines_cnt; $cln++) {
