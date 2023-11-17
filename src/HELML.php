@@ -196,7 +196,7 @@ class HELML {
             $line = \trim($str_arr[$lnum]);
 
             // Skip empty lines and comment lines starting with '#'
-            if (!\strlen($line) || \substr($line, 0, 1) === '#') continue;
+            if (!\strlen($line) || \substr($line, 0, 1) === '#' || \substr($line, 0, 2) === '//') continue;
 
             // Calculate the level of nesting for the current line by counting the number of colons at the beginning
             $level = 0;

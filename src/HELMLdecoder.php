@@ -77,7 +77,7 @@ class HELMLdecoder {
             $line = \trim($str_arr[$lnum]);
 
             // Skip empty lines and comment lines starting with '#'
-            if (!\strlen($line) || \substr($line, 0, 1) === '#') continue;
+            if (!\strlen($line) || \substr($line, 0, 1) === '#' || \substr($line, 0, 2) === '//') continue;
 
             // Calculate the level of nesting for the current line by counting the number of colons at the beginning
             $level = 0;
@@ -128,7 +128,7 @@ class HELMLdecoder {
                     }
                     continue;
                 } else {
-                    $decoded_key = self::base64Udecode(substr($key, 1));
+                    $decoded_key = self::base64Udecode(\substr($key, 1));
                     if (false !== $decoded_key) {
                         $key = $decoded_key;
                     }
@@ -210,7 +210,7 @@ class HELMLdecoder {
             }
             return \stripcslashes($encodedValue);
         } elseif ('-' === $first_char) {
-            return self::base64Udecode(substr($encodedValue, 1));
+            return self::base64Udecode(\substr($encodedValue, 1));
         }
 
         // if there are no spaces or quotes or "-" at the beginning
