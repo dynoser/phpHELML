@@ -140,13 +140,6 @@ class HELMLdecoder {
 
             // If the value is null, start a new array and add it to the parent array
             if (\is_null($value) || !\strlen($value)) {
-                if (self::$ENABLE_DBL_KEY_ARR && \array_key_exists($key, $parent)) {
-                    if (!\is_array($parent[$key])) {
-                        $parent[$key] = [$parent[$key]];
-                    }
-                } else {
-                    $parent[$key] = [];
-                }
                 $parent[$key] = [];
                 \array_push($stack, $key);
             } elseif (\array_key_exists($layer_curr, $layers_list)) {
@@ -170,8 +163,17 @@ class HELMLdecoder {
                     $value = \is_null(self::$CUSTOM_VALUE_DECODER) ? self::valueDecoder($value, $spc_ch) : \call_user_func(self::$CUSTOM_VALUE_DECODER, $value, $spc_ch);
                 }
                
-                // Add the key-value pair to the current array
-                $parent[$key] = $value;
+                if (self::$ENABLE_DBL_KEY_ARR && \array_key_exists($key, $parent)) {
+                    // If DBL_KEY_ARR enabled and key already exist
+                    if (\is_array($parent[$key])) {
+                        $parent[$key][] = $value;
+                    } else {
+                        $parent[$key] = [$parent[$key], $value];
+                    }
+                } else {
+                    // Add the key-value pair to the current array
+                    $parent[$key] = $value;
+                }
             }
         }
         
