@@ -30,6 +30,9 @@ class HELMLdecoder {
 
     // Default value decoder is self::decodeValue, may be replace here
     public static $CUSTOM_VALUE_DECODER = null;
+    
+    // Enable auto-create array when key already exists
+    public static $ENABLE_DBL_KEY_ARR = false;
 
     /**
      * Decode a HELML-formatted string or array into an associative array
@@ -137,6 +140,13 @@ class HELMLdecoder {
 
             // If the value is null, start a new array and add it to the parent array
             if (\is_null($value) || !\strlen($value)) {
+                if (self::$ENABLE_DBL_KEY_ARR && \array_key_exists($key, $parent)) {
+                    if (!\is_array($parent[$key])) {
+                        $parent[$key] = [$parent[$key]];
+                    }
+                } else {
+                    $parent[$key] = [];
+                }
                 $parent[$key] = [];
                 \array_push($stack, $key);
             } elseif (\array_key_exists($layer_curr, $layers_list)) {
