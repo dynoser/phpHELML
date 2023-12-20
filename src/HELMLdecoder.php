@@ -176,7 +176,7 @@ class HELMLdecoder {
                     }
                 } else {
                     // Use default valueDecoder or custom decoder function is specified
-                    $value = \is_null(self::$CUSTOM_VALUE_DECODER) ? self::valueDecoder($value, $spc_ch) : \call_user_func(self::$CUSTOM_VALUE_DECODER, $value, $spc_ch);
+                    $value = \is_null(self::$CUSTOM_VALUE_DECODER) ? self::valueDecode($value, $spc_ch) : \call_user_func(self::$CUSTOM_VALUE_DECODER, $value, $spc_ch);
                 }
                
                 if (self::$ENABLE_DBL_KEY_ARR && \array_key_exists($key, $parent)) {
@@ -208,8 +208,16 @@ class HELMLdecoder {
      * @param string $spc_ch
      * @return any
      */
-    public static function valueDecoder($encodedValue, $spc_ch = ' ') {
+    public static function valueDecode($encodedValue, $spc_ch = ' ') {
         $first_char = \substr($encodedValue, 0, 1);
+        if ('-' === $first_char || '+' === $first_char) {
+            $encodedValue = self::base64Udecode(\substr($encodedValue, 1));
+            if ('-' === $first_char) {
+                return $encodedValue;
+            }
+            $encodedValue = $spc_ch . $spc_ch . $encodedValue;
+            $first_char = $spc_ch;
+        }
         if ($spc_ch === $first_char) {
             if (\substr($encodedValue, 0, 2) !== $spc_ch . $spc_ch) {
                 // if the string starts with only one space, return the string after it
@@ -237,8 +245,8 @@ class HELMLdecoder {
                 return $encodedValue;
             }
             return \stripcslashes($encodedValue);
-        } elseif ('-' === $first_char) {
-            return self::base64Udecode(\substr($encodedValue, 1));
+        } elseif ('`' === $first_char) {
+            return \substr($encodedValue, 2, -2);
         }
 
         // if there are no spaces or quotes or "-" at the beginning

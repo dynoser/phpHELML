@@ -147,7 +147,7 @@ class HELML {
                 }
             } else {
                 // If the value is not an array, run it through a value encoding function, if one is specified
-                $value = null === self::$CUSTOM_VALUE_ENCODER ? self::valueEncoder($value, $spc_ch) : \call_user_func(self::$CUSTOM_VALUE_ENCODER, $value);
+                $value = null === self::$CUSTOM_VALUE_ENCODER ? self::valueEncode($value, $spc_ch) : \call_user_func(self::$CUSTOM_VALUE_ENCODER, $value);
                 // Add the key:value pair to the output
                 $results_arr[] = $key . $lvl_ch . $value;
             }
@@ -296,7 +296,7 @@ class HELML {
                     }
                 } else {
                     // Use default valueDecoder or custom decoder function is specified
-                    $value = \is_null(self::$CUSTOM_VALUE_DECODER) ? self::valueDecoder($value, $spc_ch) : \call_user_func(self::$CUSTOM_VALUE_DECODER, $value, $spc_ch);
+                    $value = \is_null(self::$CUSTOM_VALUE_DECODER) ? self::valueDecode($value, $spc_ch) : \call_user_func(self::$CUSTOM_VALUE_DECODER, $value, $spc_ch);
                 }
                
                 if (self::$ENABLE_DBL_KEY_ARR && \array_key_exists($key, $parent)) {
@@ -329,7 +329,7 @@ class HELML {
      * @return any
      * @throws InvalidArgumentException
      */
-    public static function valueEncoder($value, $spc_ch = ' ') {
+    public static function valueEncode($value, $spc_ch = ' ') {
         $type = \gettype($value);
         switch ($type) {
             case 'string':
@@ -370,9 +370,12 @@ class HELML {
                 } elseif (\is_infinite($value)) {
                     return $spc_ch . $spc_ch . ($value > 0 ? 'INF' : 'NIF');
                 }
+                if (false === \strpos($value, '.')) {
+                    $value .= '.0';
+                }
                 if ('_' === $spc_ch) {
                     // for url-mode because dot-inside
-                    return '-' . self::base64Uencode((string)$value);
+                    return '+' . self::base64Uencode((string)$value);
                 }
                 // if not url mode, go below
             case 'integer':
@@ -389,8 +392,16 @@ class HELML {
      * @param string $spc_ch
      * @return any
      */
-    public static function valueDecoder($encodedValue, $spc_ch = ' ') {
+    public static function valueDecode($encodedValue, $spc_ch = ' ') {
         $first_char = \substr($encodedValue, 0, 1);
+        if ('-' === $first_char || '+' === $first_char) {
+            $encodedValue = self::base64Udecode(\substr($encodedValue, 1));
+            if ('-' === $first_char) {
+                return $encodedValue;
+            }
+            $encodedValue = $spc_ch . $spc_ch . $encodedValue;
+            $first_char = $spc_ch;
+        }
         if ($spc_ch === $first_char) {
             if (\substr($encodedValue, 0, 2) !== $spc_ch . $spc_ch) {
                 // if the string starts with only one space, return the string after it
@@ -418,8 +429,8 @@ class HELML {
                 return $encodedValue;
             }
             return \stripcslashes($encodedValue);
-        } elseif ('-' === $first_char) {
-            return self::base64Udecode(\substr($encodedValue, 1));
+        } elseif ('`' === $first_char) {
+            return \substr($encodedValue, 2, -2);
         }
 
         // if there are no spaces or quotes or "-" at the beginning
