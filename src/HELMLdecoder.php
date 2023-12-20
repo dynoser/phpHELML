@@ -73,6 +73,7 @@ class HELMLdecoder {
         $stack = [];
 
         $min_level = -1;
+        $base_level = 0;
         
         // Loop through each line in the input array
         $lines_cnt = \count($str_arr);
@@ -97,6 +98,21 @@ class HELMLdecoder {
             $parts = \explode($lvl_ch, $line, 2);
             $key = $parts[0] ? $parts[0] : '0';
             $value = isset($parts[1]) ? $parts[1] : null;
+
+            // base_level mod
+            $level += $base_level;
+            if (!$value) {
+                if ($key === '<<') {
+                    $base_level && $base_level--;
+                    continue;
+                } elseif ($key === '>>') {
+                    $base_level++;
+                    continue;
+                }
+            } elseif ($value === '>>') {
+                $base_level++;
+                $value = '';
+            }
 
             // check min_level
             if ($min_level < 0 || $min_level > $level) {

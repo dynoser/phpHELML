@@ -100,7 +100,8 @@ class HELML {
                 if (\strlen($key)) {
                     $fc = \substr($key, 0, 1);
                     $lc = \substr($key, -1, 1);
-                    if (('#' === $fc && !$level) || $fc === $spc_ch || $fc === ' ' || $lc === $spc_ch || $lc === ' ' || false !== \strpos($key, $lvl_ch)) {
+                    if (('#' === $fc && !$level) || $fc === $spc_ch || $fc === ' ' || $lc === $spc_ch || $lc === ' '
+                            || false !== \strpos($key, $lvl_ch) || $key === '<<' || $key === '>>') {
                         $fc = '-';
                     } else {
                         $pattern = ($spc_ch == '_') ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u';
@@ -192,6 +193,7 @@ class HELML {
         $stack = [];
 
         $min_level = -1;
+        $base_level = 0;
         
         // Loop through each line in the input array
         $lines_cnt = \count($str_arr);
@@ -216,6 +218,21 @@ class HELML {
             $parts = \explode($lvl_ch, $line, 2);
             $key = $parts[0] ? $parts[0] : '0';
             $value = isset($parts[1]) ? $parts[1] : null;
+
+            // base_level mod
+            $level += $base_level;
+            if (!$value) {
+                if ($key === '<<') {
+                    $base_level && $base_level--;
+                    continue;
+                } elseif ($key === '>>') {
+                    $base_level++;
+                    continue;
+                }
+            } elseif ($value === '>>') {
+                $base_level++;
+                $value = '';
+            }
 
             // check min_level
             if ($min_level < 0 || $min_level > $level) {
