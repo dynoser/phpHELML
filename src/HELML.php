@@ -63,11 +63,18 @@ class HELML {
 
         self::_encode($arr, $results_arr, 0, $lvl_ch, $spc_ch, self::isArrayList($arr));
 
-        if ($url_mode) {
-            $results_arr[] = '';
-        } elseif ($one_line_mode) {
-            \array_map('trim', $results_arr); // remove left spaces
-            \array_filter($results_arr, function($el) { return \strlen($el) > 0 && $el[0] !== '#'; }); // remove empty and comment lines
+        if ($one_line_mode) {
+            $new_arr = [''];
+            foreach ($results_arr as $el) {
+                $st = \trim($el);
+                if (\strlen($st) > 0 && $st[0] !== '#') {  // skip empty lines and #-comments
+                    $new_arr[] = \strtr($st, "\n", $str_imp);
+                }
+            }
+            if ($url_mode) {
+                $new_arr[] = '';
+            }
+            $results_arr = $new_arr;
         }
         return \implode($str_imp, $results_arr);
     }
@@ -340,7 +347,7 @@ class HELML {
                 $lc = \substr($value, -1);
 
                 // try multi-string literal
-                if (false !== \strpos($value, "\n") && $lc !== '`'  && \function_exists('mb_check_encoding')
+                if ($spc_ch === ' ' && false !== \strpos($value, "\n") && $lc !== '`'  && \function_exists('mb_check_encoding')
                     && \mb_check_encoding($value, 'UTF-8') && !\preg_match("/`\x0d|`\x0a/", $value)) {
                         return "`\n" . $value . "\n`";
                 }
