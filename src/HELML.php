@@ -22,6 +22,9 @@ class HELML {
         'INF' => INF,
         'NIF' =>-INF,
     ];
+    
+    public static $URL_SPC = '=';
+    public static $URL_LVL = '.';
 
     //Custom hooks below (set callable if need)
     
@@ -33,6 +36,9 @@ class HELML {
     
     // Enable auto-create array when key already exists
     public static $ENABLE_DBL_KEY_ARR = false;
+    
+    public static $ADD_PREFIX = false;
+    public static $ADD_POSTFIX = false;
         
     // Default value encoder is self::encodeValue, may be replaced here
     public static $CUSTOM_VALUE_ENCODER = null;
@@ -51,15 +57,15 @@ class HELML {
      * @throws InvalidArgumentException
      */
     public static function encode($inArr, $oneLineMode = 0) {
-        $outArr = [];
+        $outArr = self::$ADD_PREFIX ? [''] : [];
         if (!\is_array($inArr)) {
             throw new \InvalidArgumentException("Array required");
         }
 
         $urlMode = ($oneLineMode == 1);
         $strImp = $oneLineMode ? "~" : "\n";
-        $lvlCh = $urlMode ? '.' : ':';
-        $spcCh = $urlMode ? '_' : ' ';
+        $lvlCh = $urlMode ? self::$URL_LVL : ':';
+        $spcCh = $urlMode ? self::$URL_SPC : ' ';
 
         self::_encode($inArr, $outArr, 0, $lvlCh, $spcCh, self::isArrayList($inArr));
 
@@ -75,6 +81,9 @@ class HELML {
                 $newArr[] = '';
             }
             $outArr = $newArr;
+        }
+        if (self::$ADD_POSTFIX) {
+            $outArr[] = '#' . $lvlCh . $spcCh . '~';
         }
         return \implode($strImp, $outArr);
     }
@@ -110,7 +119,7 @@ class HELML {
                             || false !== \strpos($key, $lvlCh) || $key === '<<' || $key === '>>') {
                         $fc = '-';
                     } else {
-                        $pattern = ($spcCh == '_') ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u';
+                        $pattern = ($spcCh == self::$URL_SPC) ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u';
                         if (!\preg_match($pattern, $key)) {
                             $fc = '-';
                         }
@@ -180,16 +189,25 @@ class HELML {
         if (\is_array($srcRows)) {
             $strArr = $srcRows;
         } elseif (\is_string($srcRows)) {
+            // Search postfix
+            $pfPos = \strpos($srcRows, '~#'); //~#: ~
+            if ($pfPos >= 0 && \substr($srcRows, $pfPos + 4, 1) === '~') {
+                // get control-chars from postfix
+                $lvlCh = $srcRows[$pfPos + 2];
+                $spcCh = $srcRows[$pfPos + 3];
+            } else {
+                $pfPos = 0;
+            }
             foreach(["\n", "\r", "~"] as $explCh) {
                 if (false !== \strpos($srcRows, $explCh)) {
-                    if ("~" === $explCh && \substr($srcRows, -1) === '~') {
-                        $lvlCh = '.';
-                        $spcCh = '_';
+                    if (!$pfPos && "~" === $explCh && \substr($srcRows, -1) === '~') {
+                        $lvlCh = self::$URL_LVL;
+                        $spcCh = self::$URL_SPC;
                     }
                     break;
                 }
             }
-            $strArr = \explode($explCh, $srcRows);
+            $strArr = \explode($explCh, $pfPos ? \substr($srcRows, 0, $pfPos) : $srcRows);
         } else {
             throw new \InvalidArgumentException("Array or String required");
         }
@@ -351,7 +369,7 @@ class HELML {
                         return "`\n" . $value . "\n`";
                 }
 
-                if (!\preg_match(($spcCh === '_') ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u', $value)) {
+                if (!\preg_match(($spcCh === self::$URL_SPC) ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u', $value)) {
                     $fc = '-';
                 }
                 if ($fc === '-') {
@@ -379,7 +397,7 @@ class HELML {
                 if (false === \strpos($value, '.')) {
                     $value .= '.0';
                 }
-                if ('_' === $spcCh) {
+                if (self::$URL_SPC === $spcCh) {
                     // for url-mode because dot-inside
                     return '+' . self::base64Uencode((string)$value);
                 }

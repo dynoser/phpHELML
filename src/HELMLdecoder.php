@@ -22,6 +22,9 @@ class HELMLdecoder {
         'INF' => INF,
         'NIF' =>-INF,
     ];
+    
+    public static $URL_SPC = '=';
+    public static $URL_LVL = '.';
 
     //Custom hooks below (set callable if need)
     
@@ -33,6 +36,7 @@ class HELMLdecoder {
     
     // Enable auto-create array when key already exists
     public static $ENABLE_DBL_KEY_ARR = false;
+    
 
     /**
      * Decode a HELML-formatted string or array into an associative array
@@ -54,16 +58,25 @@ class HELMLdecoder {
         if (\is_array($srcRows)) {
             $strArr = $srcRows;
         } elseif (\is_string($srcRows)) {
+            // Search postfix
+            $pfPos = \strpos($srcRows, '~#'); //~#: ~
+            if ($pfPos >= 0 && \substr($srcRows, $pfPos + 4, 1) === '~') {
+                // get control-chars from postfix
+                $lvlCh = $srcRows[$pfPos + 2];
+                $spcCh = $srcRows[$pfPos + 3];
+            } else {
+                $pfPos = 0;
+            }
             foreach(["\n", "\r", "~"] as $explCh) {
                 if (false !== \strpos($srcRows, $explCh)) {
-                    if ("~" === $explCh && \substr($srcRows, -1) === '~') {
-                        $lvlCh = '.';
-                        $spcCh = '_';
+                    if (!$pfPos && "~" === $explCh && \substr($srcRows, -1) === '~') {
+                        $lvlCh = self::$URL_LVL;
+                        $spcCh = self::$URL_SPC;
                     }
                     break;
                 }
             }
-            $strArr = \explode($explCh, $srcRows);
+            $strArr = \explode($explCh, $pfPos ? \substr($srcRows, 0, $pfPos) : $srcRows);
         } else {
             throw new \InvalidArgumentException("Array or String required");
         }
