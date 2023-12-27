@@ -45,73 +45,72 @@ class HELML {
     /**
      * Encode array to HELML string
      *
-     * @param array $arr
-     * @param integer $one_line_mode 0-multi-lines, 1-URL-mode, 2-oneLine-mode
+     * @param array $inArr
+     * @param integer $oneLineMode 0-multi-lines, 1-URL-mode, 2-oneLine-mode
      * @return string
      * @throws InvalidArgumentException
      */
-    public static function encode($arr, $one_line_mode = 0) {
-        $results_arr = [];
-        if (!\is_array($arr)) {
+    public static function encode($inArr, $oneLineMode = 0) {
+        $outArr = [];
+        if (!\is_array($inArr)) {
             throw new \InvalidArgumentException("Array required");
         }
 
-        $url_mode = ($one_line_mode == 1);
-        $str_imp = $one_line_mode ? "~" : "\n";
-        $lvl_ch = $url_mode ? '.' : ':';
-        $spc_ch = $url_mode ? '_' : ' ';
+        $urlMode = ($oneLineMode == 1);
+        $strImp = $oneLineMode ? "~" : "\n";
+        $lvlCh = $urlMode ? '.' : ':';
+        $spcCh = $urlMode ? '_' : ' ';
 
-        self::_encode($arr, $results_arr, 0, $lvl_ch, $spc_ch, self::isArrayList($arr));
+        self::_encode($inArr, $outArr, 0, $lvlCh, $spcCh, self::isArrayList($inArr));
 
-        if ($one_line_mode) {
-            $new_arr = [''];
-            foreach ($results_arr as $el) {
+        if ($oneLineMode) {
+            $newArr = [''];
+            foreach ($outArr as $el) {
                 $st = \trim($el);
                 if (\strlen($st) > 0 && $st[0] !== '#') {  // skip empty lines and #-comments
-                    $new_arr[] = \strtr($st, "\n", $str_imp);
+                    $newArr[] = \strtr($st, "\n", $strImp);
                 }
             }
-            if ($url_mode) {
-                $new_arr[] = '';
+            if ($urlMode) {
+                $newArr[] = '';
             }
-            $results_arr = $new_arr;
+            $outArr = $newArr;
         }
-        return \implode($str_imp, $results_arr);
+        return \implode($strImp, $outArr);
     }
 
     /**
      * Recursive helper function to process each key-value pair in the input array
      * 
-     * @param array $arr
-     * @param array &$results_arr
+     * @param array $inArr
+     * @param array &$outArr
      * @param int $level
-     * @param string $lvl_ch
-     * @param string $spc_ch
-     * @param int $is_list
+     * @param string $lvlCh
+     * @param string $spcCh
+     * @param int $isList
      */
     public static function _encode(
-        $arr,
-        &$results_arr,
+        $inArr,
+        &$outArr,
         $level = 0,
-        $lvl_ch = ':',
-        $spc_ch = ' ',
-        $is_list = 0
+        $lvlCh = ':',
+        $spcCh = ' ',
+        $isList = 0
     ) {
-        foreach ($arr as $key => $value) {
-
+        foreach ($inArr as $key => $value) {
             // Use auto-increment key index if possible
-            if ($is_list && self::$ENABLE_BONES) {
+            if ($isList && self::$ENABLE_BONES) {
                 $key = '--';
-            } else if (!$is_list) {
+            } else if (!$isList) {
                 // Encode $key in base64url if it contains unwanted characters
                 if (\strlen($key)) {
                     $fc = \substr($key, 0, 1);
                     $lc = \substr($key, -1, 1);
-                    if (('#' === $fc && !$level) || $fc === $spc_ch || $fc === ' ' || $lc === $spc_ch || $lc === ' '
-                            || false !== \strpos($key, $lvl_ch) || $key === '<<' || $key === '>>') {
+                    if (('#' === $fc && !$level) || $fc === $spcCh || $fc === ' ' || $lc === $spcCh || $lc === ' '
+                            || false !== \strpos($key, $lvlCh) || $key === '<<' || $key === '>>') {
                         $fc = '-';
                     } else {
-                        $pattern = ($spc_ch == '_') ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u';
+                        $pattern = ($spcCh == '_') ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u';
                         if (!\preg_match($pattern, $key)) {
                             $fc = '-';
                         }
@@ -127,36 +126,36 @@ class HELML {
             }
 
             // Add the appropriate number of colons to the left of the key, based on the current level
-            $key = \str_repeat($lvl_ch, $level) . $key;
+            $key = \str_repeat($lvlCh, $level) . $key;
             
             // add space-ident to the left of the key (if need)
-            if (self::$ENABLE_SPC_IDENT && ' ' === $spc_ch) {
-                $key = \str_repeat($spc_ch, $level * self::$ENABLE_SPC_IDENT) . $key;
+            if (self::$ENABLE_SPC_IDENT && ' ' === $spcCh) {
+                $key = \str_repeat($spcCh, $level * self::$ENABLE_SPC_IDENT) . $key;
             }
 
             if (\is_array($value)) {
                 // Add empty line before create-key
-                if (self::$ENABLE_KEY_UPLINES && ' ' === $spc_ch) {
-                    $results_arr[] = '';
+                if (self::$ENABLE_KEY_UPLINES && ' ' === $spcCh) {
+                    $outArr[] = '';
                 }
 
-                $is_num_keys = self::isArrayList($value);
-                if (!$is_num_keys) {
-                    $key .= $lvl_ch;
+                $isNumKeys = self::isArrayList($value);
+                if (!$isNumKeys) {
+                    $key .= $lvlCh;
                 }
 
                 // If the value is an array, call this function recursively and increase the level
-                $results_arr[] = $key;
-                self::_encode($value, $results_arr, $level + 1, $lvl_ch, $spc_ch, $is_num_keys);
+                $outArr[] = $key;
+                self::_encode($value, $outArr, $level + 1, $lvlCh, $spcCh, $isNumKeys);
 
-                if (self::$ENABLE_KEY_UPLINES && ' ' === $spc_ch) {
-                    $results_arr[] = \str_repeat($spc_ch, $level) . '#';
+                if (self::$ENABLE_KEY_UPLINES && ' ' === $spcCh) {
+                    $outArr[] = \str_repeat($spcCh, $level) . '#';
                 }
             } else {
                 // If the value is not an array, run it through a value encoding function, if one is specified
-                $value = null === self::$CUSTOM_VALUE_ENCODER ? self::valueEncode($value, $spc_ch) : \call_user_func(self::$CUSTOM_VALUE_ENCODER, $value);
+                $value = null === self::$CUSTOM_VALUE_ENCODER ? self::valueEncode($value, $spcCh) : \call_user_func(self::$CUSTOM_VALUE_ENCODER, $value);
                 // Add the key:value pair to the output
-                $results_arr[] = $key . $lvl_ch . $value;
+                $outArr[] = $key . $lvlCh . $value;
             }
         }
     }
@@ -164,33 +163,33 @@ class HELML {
     /**
      * Decode a HELML-formatted string or array into an associative array
      * 
-     * @param string|array $src_rows
+     * @param string|array $srcRows
      * @return array
      * @throws InvalidArgumentException
      */
-    public static function decode($src_rows, $layers_list = [0]) {
+    public static function decode($srcRows, $layersListSrc = [0]) {
         // If the input is an array, use it. Otherwise, split the input string into an array.
-        $lvl_ch = ':';
-        $spc_ch = ' ';
+        $lvlCh = ':';
+        $spcCh = ' ';
         
-        $layer_init = 0;
-        $layer_curr = $layer_init;
-        $layers_list = \array_flip($layers_list); // move values into keys
-        $all_layers = [$layer_init => 1];
+        $layerInit = 0;
+        $layerCurr = $layerInit;
+        $layersList = \array_flip($layersListSrc); // move values into keys
+        $allLayers = [$layerInit => 1];
 
-        if (\is_array($src_rows)) {
-            $str_arr = $src_rows;
-        } elseif (\is_string($src_rows)) {
-            foreach(["\n", "\r", "~"] as $exploder_ch) {
-                if (false !== \strpos($src_rows, $exploder_ch)) {
-                    if ("~" === $exploder_ch && \substr($src_rows, -1) === '~') {
-                        $lvl_ch = '.';
-                        $spc_ch = '_';
+        if (\is_array($srcRows)) {
+            $strArr = $srcRows;
+        } elseif (\is_string($srcRows)) {
+            foreach(["\n", "\r", "~"] as $explCh) {
+                if (false !== \strpos($srcRows, $explCh)) {
+                    if ("~" === $explCh && \substr($srcRows, -1) === '~') {
+                        $lvlCh = '.';
+                        $spcCh = '_';
                     }
                     break;
                 }
             }
-            $str_arr = \explode($exploder_ch, $src_rows);
+            $strArr = \explode($explCh, $srcRows);
         } else {
             throw new \InvalidArgumentException("Array or String required");
         }
@@ -199,20 +198,20 @@ class HELML {
         $result = [];
         $stack = [];
 
-        $min_level = -1;
-        $base_level = 0;
+        $minLevel = -1;
+        $baseLevel = 0;
         
         // Loop through each line in the input array
-        $lines_cnt = \count($str_arr);
-        for ($lnum = 0; $lnum < $lines_cnt; $lnum++) {
-            $line = \trim($str_arr[$lnum]);
+        $linesCnt = \count($strArr);
+        for ($lNum = 0; $lNum < $linesCnt; $lNum++) {
+            $line = \trim($strArr[$lNum]);
 
             // Skip empty lines and comment lines starting with '#'
             if (!\strlen($line) || \substr($line, 0, 1) === '#' || \substr($line, 0, 2) === '//') continue;
 
             // Calculate the level of nesting for the current line by counting the number of colons at the beginning
             $level = 0;
-            while (\substr($line, $level, 1) === $lvl_ch) {
+            while (\substr($line, $level, 1) === $lvlCh) {
                 $level++;
             }
 
@@ -222,38 +221,38 @@ class HELML {
             }
 
             // Split the line into a key and a value (or null if the line starts a new array)
-            $parts = \explode($lvl_ch, $line, 2);
+            $parts = \explode($lvlCh, $line, 2);
             $key = $parts[0] ? $parts[0] : '0';
             $value = isset($parts[1]) ? $parts[1] : null;
 
             // base_level mod
-            $level += $base_level;
+            $level += $baseLevel;
             if (!$value) {
                 if ($key === '<<') {
-                    $base_level && $base_level--;
+                    $baseLevel && $baseLevel--;
                     continue;
                 } elseif ($key === '>>') {
-                    $base_level++;
+                    $baseLevel++;
                     continue;
                 }
             } elseif ($value === '>>') {
-                $base_level++;
+                $baseLevel++;
                 $value = '';
             }
 
             // check min_level
-            if ($min_level < 0 || $min_level > $level) {
-                $min_level = $level;
+            if ($minLevel < 0 || $minLevel > $level) {
+                $minLevel = $level;
             }
 
             // Remove keys from the stack if level decreased
-            $extra_keys_cnt = \count($stack) - $level + $min_level;
+            $extra_keys_cnt = \count($stack) - $level + $minLevel;
             if ($extra_keys_cnt > 0) {
                 // removing extra keys from stack
                  while(\count($stack) && $extra_keys_cnt--) {
                      \array_pop($stack);
                  }
-                $layer_curr = $layer_init;
+                $layerCurr = $layerInit;
             }
 
             // Find the parent element in the result array for the current key
@@ -268,15 +267,15 @@ class HELML {
                     // auto-create next numeric key
                     $key = \count($parent);
                 } elseif ($key === '-+') {
-                    $layer_curr = ($value  || $value === '0') ? $value : (\is_numeric($layer_curr) ? ($layer_curr + 1) : 0);
-                    if (empty($all_layers[$layer_curr])) {
-                        $all_layers[$layer_curr] = 1;
+                    $layerCurr = ($value  || $value === '0') ? $value : (\is_numeric($layerCurr) ? ($layerCurr + 1) : 0);
+                    if (empty($allLayers[$layerCurr])) {
+                        $allLayers[$layerCurr] = 1;
                     }
                     continue;
                 } else {
-                    $decoded_key = self::base64Udecode(\substr($key, 1));
-                    if (false !== $decoded_key) {
-                        $key = $decoded_key;
+                    $decodedKey = self::base64Udecode(\substr($key, 1));
+                    if (false !== $decodedKey) {
+                        $key = $decodedKey;
                     }
                 }
             }
@@ -285,15 +284,15 @@ class HELML {
             if (\is_null($value) || !\strlen($value)) {
                 $parent[$key] = [];
                 \array_push($stack, $key);
-            } elseif (\array_key_exists($layer_curr, $layers_list)) {
+            } elseif (\array_key_exists($layerCurr, $layersList)) {
                 // multistring literal
                 if ($value === '`') {
                     $value = [];
-                    for($cln = $lnum + 1; $cln < $lines_cnt; $cln++) {
-                        $line = \trim($str_arr[$cln],"\r\n\x00");
+                    for($cln = $lNum + 1; $cln < $linesCnt; $cln++) {
+                        $line = \trim($strArr[$cln],"\r\n\x00");
                         if (\trim($line) === '`') {
                             $value = \implode("\n", $value);
-                            $lnum = $cln;
+                            $lNum = $cln;
                             break;
                         }
                         $value[] = $line;
@@ -303,7 +302,7 @@ class HELML {
                     }
                 } else {
                     // Use default valueDecoder or custom decoder function is specified
-                    $value = \is_null(self::$CUSTOM_VALUE_DECODER) ? self::valueDecode($value, $spc_ch) : \call_user_func(self::$CUSTOM_VALUE_DECODER, $value, $spc_ch);
+                    $value = \is_null(self::$CUSTOM_VALUE_DECODER) ? self::valueDecode($value, $spcCh) : \call_user_func(self::$CUSTOM_VALUE_DECODER, $value, $spcCh);
                 }
                
                 if (self::$ENABLE_DBL_KEY_ARR && \array_key_exists($key, $parent)) {
@@ -320,8 +319,8 @@ class HELML {
             }
         }
         
-        if (\count($all_layers) > 1) {
-            $result['_layers'] = \array_keys($all_layers);
+        if (\count($allLayers) > 1) {
+            $result['_layers'] = \array_keys($allLayers);
         }
 
         // Return the result array
@@ -332,11 +331,11 @@ class HELML {
      * Encode a value based on its type and add any necessary prefixes
      * 
      * @param string $value
-     * @param string $spc_ch
+     * @param string $spcCh
      * @return any
      * @throws InvalidArgumentException
      */
-    public static function valueEncode($value, $spc_ch = ' ') {
+    public static function valueEncode($value, $spcCh = ' ') {
         $type = \gettype($value);
         switch ($type) {
             case 'string':
@@ -347,46 +346,46 @@ class HELML {
                 $lc = \substr($value, -1);
 
                 // try multi-string literal
-                if ($spc_ch === ' ' && false !== \strpos($value, "\n") && $lc !== '`'  && \function_exists('mb_check_encoding')
+                if ($spcCh === ' ' && false !== \strpos($value, "\n") && $lc !== '`'  && \function_exists('mb_check_encoding')
                     && \mb_check_encoding($value, 'UTF-8') && !\preg_match("/`\x0d|`\x0a/", $value)) {
                         return "`\n" . $value . "\n`";
                 }
 
-                if (!\preg_match(($spc_ch === '_') ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u', $value)) {
+                if (!\preg_match(($spcCh === '_') ? '/^[ -}]+$/' : '/^[^\x00-\x1F\x7E-\xFF]+$/u', $value)) {
                     $fc = '-';
                 }
                 if ($fc === '-') {
                     return '-' . self::base64Uencode($value);
-                } elseif ($spc_ch === $fc || ' ' === $fc ||  $spc_ch === $lc || \ctype_space($lc)) {
+                } elseif ($spcCh === $fc || ' ' === $fc ||  $spcCh === $lc || \ctype_space($lc)) {
                     // for empty strings or those that have spaces at the beginning or end
                     return "'" . $value . "'";
                 }
                 // if the value is simple, just add one space at the beginning
-                return $spc_ch . $value;
+                return $spcCh . $value;
 
             case 'boolean':
-                return $spc_ch . $spc_ch . ($value ? 'T' : 'F');
+                return $spcCh . $spcCh . ($value ? 'T' : 'F');
 
             case 'NULL':
-                return $spc_ch . $spc_ch . 'N';
+                return $spcCh . $spcCh . 'N';
 
             case 'double':
             case 'float':
                 if (\is_nan($value)) {
-                    return $spc_ch . $spc_ch . 'NAN';
+                    return $spcCh . $spcCh . 'NAN';
                 } elseif (\is_infinite($value)) {
-                    return $spc_ch . $spc_ch . ($value > 0 ? 'INF' : 'NIF');
+                    return $spcCh . $spcCh . ($value > 0 ? 'INF' : 'NIF');
                 }
                 if (false === \strpos($value, '.')) {
                     $value .= '.0';
                 }
-                if ('_' === $spc_ch) {
+                if ('_' === $spcCh) {
                     // for url-mode because dot-inside
                     return '+' . self::base64Uencode((string)$value);
                 }
                 // if not url mode, go below
             case 'integer':
-                return $spc_ch . $spc_ch . $value;
+                return $spcCh . $spcCh . $value;
             default:
                 throw new \InvalidArgumentException("Cannot encode value of type $type");
         }
@@ -396,21 +395,21 @@ class HELML {
      * Decode an encoded value based on its prefix
      * 
      * @param string $encodedValue
-     * @param string $spc_ch
+     * @param string $spcCh
      * @return any
      */
-    public static function valueDecode($encodedValue, $spc_ch = ' ') {
-        $first_char = \substr($encodedValue, 0, 1);
-        if ('-' === $first_char || '+' === $first_char) {
+    public static function valueDecode($encodedValue, $spcCh = ' ') {
+        $fc = \substr($encodedValue, 0, 1);
+        if ('-' === $fc || '+' === $fc) {
             $encodedValue = self::base64Udecode(\substr($encodedValue, 1));
-            if ('-' === $first_char) {
+            if ('-' === $fc) {
                 return $encodedValue;
             }
-            $encodedValue = $spc_ch . $spc_ch . $encodedValue;
-            $first_char = $spc_ch;
+            $encodedValue = $spcCh . $spcCh . $encodedValue;
+            $fc = $spcCh;
         }
-        if ($spc_ch === $first_char) {
-            if (\substr($encodedValue, 0, 2) !== $spc_ch . $spc_ch) {
+        if ($spcCh === $fc) {
+            if (\substr($encodedValue, 0, 2) !== $spcCh . $spcCh) {
                 // if the string starts with only one space, return the string after it
                 return \substr($encodedValue, 1);
             }
@@ -430,13 +429,13 @@ class HELML {
                 return \call_user_func(self::$CUSTOM_FORMAT_DECODER, $encodedValue);
             }            
             return $encodedValue;
-        } elseif ('"' === $first_char || "'" === $first_char) {
+        } elseif ('"' === $fc || "'" === $fc) {
             $encodedValue = \substr($encodedValue, 1, -1); // trim the presumed quotes at the edges and return the interior
-            if ("'" === $first_char) {
+            if ("'" === $fc) {
                 return $encodedValue;
             }
             return \stripcslashes($encodedValue);
-        } elseif ('`' === $first_char) {
+        } elseif ('`' === $fc) {
             return \substr($encodedValue, 2, -2);
         }
 
@@ -454,21 +453,24 @@ class HELML {
      * otherwise returns 0
      * 
      * @param array $arr
-     * @param int $expected_count
+     * @param int $expectedCount
      * @return int
      */
-    public static function isArrayList(&$arr, $expected_count = false)
+    public static function isArrayList(&$arr, $expectedCount = false)
     {
-        if (!\array_key_exists(0, $arr))
+        if (!\array_key_exists(0, $arr)) {
             return 0;
-        $el_count = \count($arr);
-        if ($expected_count && ($el_count != $expected_count))
-            return 0;
-        for($i = 1; $i < $el_count; $i++) {
-            if (!\array_key_exists($i, $arr))
-                return 0;
         }
-        return $el_count;
+        $elCount = \count($arr);
+        if ($expectedCount && ($elCount != $expectedCount)) {
+            return 0;
+        }
+        for($i = 1; $i < $elCount; $i++) {
+            if (!\array_key_exists($i, $arr)) {
+                return 0;
+            }
+        }
+        return $elCount;
     }
 
     /**
