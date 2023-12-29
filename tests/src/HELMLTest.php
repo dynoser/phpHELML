@@ -23,6 +23,8 @@ class HELMLTest extends TestCase {
             ' ' => 'a',
             '_' => 'b',
             '=' => 'c',
+            '@' => 'd',
+            '#' => 'e',
         ] as $spc_ch => $kv) {
         foreach ([
             ['A: abcd',
@@ -309,15 +311,27 @@ HELML,
      * @dataProvider provideDecodingCases
      */
     public function testEncode($helml, $arr, $spc_ch): void {
+        $obj = $this->object;
         if  ($spc_ch !== ' ') {
-            $result = $this->object->decode($helml);
-            if ($spc_ch === '_') {
-                $helml = $this->object->encode($result, 1);
-            } else {
-                $helml = $this->object->encode($result, 2);
+            $addPf = false;
+            if ($spc_ch === '@') {
+                $spc_ch  = '_';
+                $addPf = true;
             }
+            if ($spc_ch === '#') {
+                $spc_ch = '=';
+                $addPf = true;
+            }
+            $obj::$ADD_POSTFIX = $addPf;
+            $result = $obj->decode($helml);
+            if ($spc_ch === '_') {
+                $helml = $obj->encode($result, 1);
+            } else {
+                $helml = $obj->encode($result, 2);
+            }
+            echo $helml . "\n";
         }
-        $result = $this->object->decode($helml);
+        $result = $obj->decode($helml);
         $this->assertSame($arr, $result);
     }
 
@@ -401,18 +415,86 @@ HELML,
      * @dataProvider provideDecodingCases
      */
     public function testDecode($helml, $arr, $spc_ch): void {
+        $obj = $this->object;
         if  ($spc_ch !== ' ') {
-            $result = $this->object->decode($helml);
+            $addPf = false;
+            if ($spc_ch === '@') {
+                $spc_ch  = '_';
+                $addPf = true;
+            }
+            if ($spc_ch === '#') {
+                $spc_ch = '=';
+                $addPf = true;
+            }
+            $obj::$ADD_POSTFIX = $addPf;
+            $result = $obj->decode($helml);
             if ($spc_ch === '_') {
-                $helml = $this->object->encode($result, 1);
+                $helml = $obj->encode($result, 1);
             } else {
-                $helml = $this->object->encode($result, 2);
+                $helml = $obj->encode($result, 2);
             }
         }
-        $result = $this->object->decode($helml);
+        $result = $obj->decode($helml);
         $this->assertSame($arr, $result);
     }
 
+        
+    public function providePrfixPostfix() {
+        return  [
+            [<<<CASE
+            ~
+            A:  1
+            B:  2
+            CASE,
+            ['A'=> 1, 'B'=> 2],
+            ],
+
+            [<<<CASE
+            A:  1
+            B:  2
+            ~#: ~
+            CASE,
+            ['A'=> 1, 'B'=> 2],
+            ],
+            
+            [<<<CASE
+            A=>>1
+            B=>>2
+            ~#=>~
+            CASE,
+            ['A'=> 1, 'B'=> 2],
+            ],
+            
+            [<<<CASE
+            ~A.==1~B.==2~
+            CASE,
+            ['A'=> 1, 'B'=> 2],
+            ],
+            
+            [<<<CASE
+            ~A.==1~B.==2~#.=~
+            CASE,
+            ['A'=> 1, 'B'=> 2],
+            ],
+            
+            [<<<CASE
+            ~A=..1~B=..2~#=.~
+            CASE,
+            ['A'=> 1, 'B'=> 2],
+            ],
+        ];
+    }
+
+    /**
+     * @covers dynoser\HELML\HELML::decode
+     * @dataProvider providePrfixPostfix
+     */
+    public function testPrefixPostfix($helml, $expected) {
+        $obj = $this->object;
+        $result = $obj->decode($helml);
+        $this->assertSame($expected, $result);
+    }
+    
     /**
      * @covers dynoser\HELML\HELML::valueDecode
      * @dataProvider provideValueDecodingCases
@@ -516,5 +598,42 @@ HELML,
         $this->assertIsString($encoded);
         $decoded = $obj->base64Udecode($encoded);
         $this->assertSame($rndStr, $decoded);
+    }
+    
+    
+    public function providerHexDecode() {
+        return [
+            [
+                '%6A %B %C',
+                '6A0B0C'
+            ],
+            [
+                '6A B C',
+                '6A0B0C'
+            ],
+            [
+                '%A  7B    C',
+                '0A7B0C'
+            ],
+            [
+                '01 23 45 67 89',
+                '0123456789',
+            ],
+            [
+                '0123456789',
+                '0123456789',
+            ],
+
+        ];
+    }
+    /**
+     * @covers dynoser\HELML\HELML::hexDecode
+     * @dataProvider providerHexDecode
+     */
+    public function testHexDecode($hexStr, $expectedHex): void {
+        $obj = $this->object;
+        $decoded = $obj::hexDecode($hexStr);
+        $this->assertIsString($decoded);
+        $this->assertSame(\hex2bin($expectedHex), $decoded);
     }
 }
