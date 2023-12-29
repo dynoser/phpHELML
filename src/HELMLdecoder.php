@@ -67,12 +67,18 @@ class HELMLdecoder {
             } else {
                 $pfPos = 0;
             }
-            foreach(["\n", "\r", "~"] as $explCh) {
+
+            if (!$pfPos && \substr($srcRows, -1) === '~') {
+                $lvlCh = self::$URL_LVL;
+                $spcCh = self::$URL_SPC;
+            }
+
+            // Replace all ~ to line divider
+            $srcRows = \strtr($srcRows, '~', "\n");
+            
+            // Detect Line Divider
+            foreach(["\n", "\r"] as $explCh) {
                 if (false !== \strpos($srcRows, $explCh)) {
-                    if (!$pfPos && "~" === $explCh && \substr($srcRows, -1) === '~') {
-                        $lvlCh = self::$URL_LVL;
-                        $spcCh = self::$URL_SPC;
-                    }
                     break;
                 }
             }
@@ -133,10 +139,10 @@ class HELMLdecoder {
             }
 
             // Remove keys from the stack if level decreased
-            $extra_keys_cnt = \count($stack) - $level + $minLevel;
-            if ($extra_keys_cnt > 0) {
+            $extraKeysCnt = \count($stack) - $level + $minLevel;
+            if ($extraKeysCnt > 0) {
                 // removing extra keys from stack
-                 while(\count($stack) && $extra_keys_cnt--) {
+                 while(\count($stack) && $extraKeysCnt--) {
                      \array_pop($stack);
                  }
                 $layerCurr = $layerInit;
@@ -153,11 +159,18 @@ class HELMLdecoder {
                 if ($key === '--') {
                     // auto-create next numeric key
                     $key = \count($parent);
-                } elseif ($key === '-+') {
-                    $layerCurr = ($value  || $value === '0') ? $value : (\is_numeric($layerCurr) ? ($layerCurr + 1) : 0);
-                    if (empty($allLayers[$layerCurr])) {
-                        $allLayers[$layerCurr] = 1;
+                } elseif ($key === '-+' || $key === '-++' || $key === '---') {
+                    // Layer control keys
+                    if (\is_string($value)) {
+                        $value = \trim($value);
                     }
+                    if ($key === '-++') {
+                        $layerInit = $value ? $value : '0';
+                        $layerCurr = $layerInit;
+                    } elseif ($key === '-+') {
+                        $layerCurr = ($value  || $value === '0') ? $value : (\is_numeric($layerCurr) ? ($layerCurr + 1) : 0);
+                    }
+                    $allLayers[$layerCurr] = 1;
                     continue;
                 } else {
                     $decodedKey = self::base64Udecode(\substr($key, 1));
@@ -168,7 +181,7 @@ class HELMLdecoder {
             }
 
             // If the value is null, start a new array and add it to the parent array
-            if (\is_null($value) || !\strlen($value)) {
+            if (\is_null($value) || $value === '') {
                 $parent[$key] = [];
                 \array_push($stack, $key);
             } elseif (\array_key_exists($layerCurr, $layersList)) {
@@ -260,6 +273,8 @@ class HELMLdecoder {
             return \stripcslashes($encodedValue);
         } elseif ('`' === $fc) {
             return \substr($encodedValue, 2, -2);
+        } elseif ('%' === $fc) {
+            return self::hexDecode(\substr($encodedValue, 1));
         }
 
         // if there are no spaces or quotes or "-" at the beginning
@@ -278,5 +293,23 @@ class HELMLdecoder {
      */
     public static function base64Udecode($str) {
         return \base64_decode(\strtr($str, '-_', '+/'));
+    }
+    
+    public static function hexDecode($str) {
+        $hexArr = [];
+        $l = \strlen($str);
+        for($i = 0; $i < $l; $i++) {
+            $ch1 = $str[$i];
+            if (\ctype_xdigit($ch1)) {
+                $ch2 = \substr($str, $i+1, 1);
+                if (\ctype_xdigit($ch2)) {
+                    $hexArr[] = $ch1 . $ch2;
+                    $i++;
+                } else {
+                    $hexArr[] = '0' . $ch1;
+                }
+            }
+        }
+        return \hex2bin(\implode('', $hexArr));
     }
 }
