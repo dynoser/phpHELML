@@ -1,5 +1,5 @@
-hashsig: ca0e43a5d4d36694c31f9132888a18e011ab6dc395fdd63fe4678244acdd48ff ~ filescnt: 4 ~ hashalg: sha256 ~ signalg: ed25519 ~ pubkey: EkDohf20jN/9kXW/WL3ZXo245ggek9TiTWzzmBriMTU= ~ signature: mjSKHSXuZaoBGht5GlO9y6ReDtcM4bN+v8WpD4sOTKEmLlUpBkRnB6AHZYjxFZtaOYThbHsYyqQq+p8ViExyBQ==
+hashsig: 1ae0ce85441b7f4963d4f4e77100406f1c1d469ce7dacb1b8732412991d0e548 ~ filescnt: 4 ~ hashalg: sha256 ~ signalg: ed25519 ~ pubkey: EkDohf20jN/9kXW/WL3ZXo245ggek9TiTWzzmBriMTU= ~ signature: aiPtIoRTSOI77+K+GxoqjJ7r1AGMtTBD6dQKHkIAXx/26X4HZ6uhApMg3IHT2h5l+tXrba+ASAJD0BOCXCXhAA==
 src/fileHELMLsect.php: a8e4407435b338b90a32b7375c405ec5ed37cad119af2c4073d4131b854e9016 8097
-src/HELML.php: 4d9fcf89cd8f6b26e837fd3ce99b5c017fb4dd25adfd6ae3f8fa6354fbca839d 17438
-src/HELMLdecoder.php: 1dcc03c3552859f5d50cb531a48beb253522a732d920db813db12ba8cb365a98 9296
+src/HELML.php: 06797b504718347b13fdae5d7b68adef5fc3fea6f04f158e1d6eb317de77f854 17438
+src/HELMLdecoder.php: 911a2abad72870c13f5bf25b9bf93169699e572e731f914ca514b5fd297bc54e 9296
 src/HELMLmicro.php: b30b79b9ba5cb62574508efcbcec1fa1feb0471bba062fd2b2e101a884640dbd 9296
