@@ -1,5 +1,8 @@
 <?php
 namespace dynoser\HELML;
+
+use dynoser\base85\vc85;
+
 /*
  * This code represents a PHP implementation of the HELML class without dependencies.
  * 
@@ -47,6 +50,8 @@ class HELML {
     public static $ENABLE_SPC_IDENT = 1;
     public static $ENABLE_KEY_UPLINES = true; //add empty line before create-array-keys
     public static $ENABLE_HASHSYMBOLS = false; // adding # after nested-blocks
+    
+    public static $BASE85_ENCODE_MODE = 2; // 0 - disabled, 1 - std.ascii-85, 2 - vwx-ascii-85, 3-vc85
 
     /**
      * Encode array to HELML string
@@ -318,18 +323,23 @@ class HELML {
                 \array_push($stack, $key);
             } elseif (\array_key_exists($layerCurr, $layersList)) {
                 // multistring literal
-                if ($value === '`') {
+                if ($value === '`' || $value === '<') {
+                    $endChar = ($value === '<') ? '>' : '`';
                     $value = [];
                     for($cln = $lNum + 1; $cln < $linesCnt; $cln++) {
                         $line = \trim($strArr[$cln],"\r\n\x00");
-                        if (\trim($line) === '`') {
+                        if (\trim($line) === $endChar) {
                             $value = \implode("\n", $value);
                             $lNum = $cln;
                             break;
                         }
                         $value[] = $line;
                     }
-                    if (!\is_string($value)) {
+                    if (\is_string($value)) {
+                        if ($endChar === '>') {
+                            $value = vc85::decode($value);
+                        }
+                    } else {
                         $value = '`ERR`';
                     }
                 } else {
@@ -378,7 +388,7 @@ class HELML {
                 $lc = \substr($value, -1);
 
                 // try multi-string literal
-                if ($spcCh === ' ' && false !== \strpos($value, "\n") && $lc !== '`'  && \function_exists('mb_check_encoding')
+                if ($spcCh === ' ' && false !== \strpos($value, "\n") && \function_exists('mb_check_encoding')
                     && \mb_check_encoding($value, 'UTF-8') && !\preg_match("/`\x0d|`\x0a/", $value)) {
                         return "`\n" . $value . "\n`";
                 }
@@ -387,6 +397,14 @@ class HELML {
                     $fc = '-';
                 }
                 if ($fc === '-') {
+                    if (self::$BASE85_ENCODE_MODE && $spcCh === ' ') {
+                        if (\class_exists('\dynoser\base85\vc85')) {
+                            vc85::init(self::$BASE85_ENCODE_MODE, 75, true);
+                            return vc85::encode($value);
+                        } else {
+                            self::$BASE85_ENCODE_MODE = 0;
+                        }
+                    }
                     return '-' . self::base64Uencode($value);
                 } elseif ($spcCh === $fc || ' ' === $fc ||  $spcCh === $lc || \ctype_space($lc)) {
                     // for empty strings or those that have spaces at the beginning or end
@@ -413,7 +431,7 @@ class HELML {
                 }
                 if (self::$URL_SPC === $spcCh) {
                     // for url-mode because dot-inside
-                    return '+' . self::base64Uencode((string)$value);
+                    return '+' . self::base64Uencode($spcCh. $spcCh . (string)$value);
                 }
                 // if not url mode, go below
             case 'integer':
@@ -437,8 +455,7 @@ class HELML {
             if ('-' === $fc) {
                 return $encodedValue;
             }
-            $encodedValue = $spcCh . $spcCh . $encodedValue;
-            $fc = $spcCh;
+            $fc = \substr($encodedValue, 0, 1);
         }
         if ($spcCh === $fc) {
             if (\substr($encodedValue, 0, 2) !== $spcCh . $spcCh) {
@@ -469,6 +486,8 @@ class HELML {
             return \stripcslashes($encodedValue);
         } elseif ('`' === $fc) {
             return \substr($encodedValue, 2, -2);
+        } elseif ('<' === $fc) {
+            return vc85::decode($encodedValue);
         } elseif ('%' === $fc) {
             return self::hexDecode(\substr($encodedValue, 1));
         }
