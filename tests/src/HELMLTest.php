@@ -295,6 +295,10 @@ HELML,
      * This method is called before a test is executed.
      */
     protected function setUp(): void {
+        $file = '../../base85/src/vc85.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
         $this->object = new HELML;
     }
 
@@ -329,7 +333,7 @@ HELML,
             } else {
                 $helml = $obj->encode($result, 2);
             }
-            echo $helml . "\n";
+            //echo $helml . "\n";
         }
         $result = $obj->decode($helml);
         $this->assertSame($arr, $result);
@@ -529,6 +533,36 @@ HELML,
             }
          }
      }
+     
+     public function provideFloatValues() {
+        return [
+            [1.2345],
+            [0.0],
+            [0.1],
+            [-.0],
+            [-.1],
+            [1234.5678],
+            [-1234.5678],
+
+        ];
+     }
+     
+    /**
+    * @covers dynoser\HELML\HELML::valueEncode
+    * @dataProvider provideFloatValues
+    */
+    public function testFloat($floatValue) {
+        $obj = $this->object;
+        foreach([0,1,2] as $oneLineMode) {
+            $enc = $obj->encode([$floatValue], $oneLineMode);
+            //echo "$floatValue => $enc \n";
+            $dec = $obj->decode($enc);
+            $this->assertArrayHasKey(0, $dec);
+            $backValue = $dec[0];
+            $this->assertSame($floatValue, $backValue);
+        }
+    }
+     
      
     public function provideForIsArrayList() {
         foreach([
