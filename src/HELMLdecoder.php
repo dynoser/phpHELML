@@ -1,5 +1,8 @@
 <?php
 namespace dynoser\HELML;
+
+use dynoser\base85\vc85;
+
 /*
  * This code represents a PHP implementation of the HELMLdecoder class without dependencies.
  * 
@@ -186,18 +189,23 @@ class HELMLdecoder {
                 \array_push($stack, $key);
             } elseif (\array_key_exists($layerCurr, $layersList)) {
                 // multistring literal
-                if ($value === '`') {
+                if ($value === '`' || $value === '<') {
+                    $endChar = ($value === '<') ? '>' : '`';
                     $value = [];
                     for($cln = $lNum + 1; $cln < $linesCnt; $cln++) {
                         $line = \trim($strArr[$cln],"\r\n\x00");
-                        if (\trim($line) === '`') {
+                        if (\trim($line) === $endChar) {
                             $value = \implode("\n", $value);
                             $lNum = $cln;
                             break;
                         }
                         $value[] = $line;
                     }
-                    if (!\is_string($value)) {
+                    if (\is_string($value)) {
+                        if ($endChar === '>') {
+                            $value = vc85::decode($value);
+                        }
+                    } else {
                         $value = '`ERR`';
                     }
                 } else {
@@ -241,8 +249,7 @@ class HELMLdecoder {
             if ('-' === $fc) {
                 return $encodedValue;
             }
-            $encodedValue = $spcCh . $spcCh . $encodedValue;
-            $fc = $spcCh;
+            $fc = \substr($encodedValue, 0, 1);
         }
         if ($spcCh === $fc) {
             if (\substr($encodedValue, 0, 2) !== $spcCh . $spcCh) {
@@ -273,6 +280,8 @@ class HELMLdecoder {
             return \stripcslashes($encodedValue);
         } elseif ('`' === $fc) {
             return \substr($encodedValue, 2, -2);
+        } elseif ('<' === $fc) {
+            return vc85::decode($encodedValue);
         } elseif ('%' === $fc) {
             return self::hexDecode(\substr($encodedValue, 1));
         }
