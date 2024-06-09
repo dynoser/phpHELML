@@ -13,23 +13,23 @@ class HELMLmicro
         'NIF' =>-INF,
     ];
 
-    public static function decode($src_rows) {
-        $lvl_ch = ':';
-        $spc_ch = ' ';
+    public static function decode($srcRows) {
+        $lvlCh = ':';
+        $spcCh = ' ';
 
-        if (\is_array($src_rows)) {
-            $str_arr = $src_rows;
-        } elseif (\is_string($src_rows)) {
-            foreach(["\n", "\r", "~"] as $exploder_ch) {
-                if (false !== \strpos($src_rows, $exploder_ch)) {
-                    if ("~" === $exploder_ch && \substr($src_rows, -1) === '~') {
-                        $lvl_ch = '.';
-                        $spc_ch = '_';
+        if (\is_array($srcRows)) {
+            $strArr = $srcRows;
+        } elseif (\is_string($srcRows)) {
+            foreach(["\n", "\r", "~"] as $explCh) {
+                if (false !== \strpos($srcRows, $explCh)) {
+                    if ("~" === $explCh && \substr($srcRows, -1) === '~') {
+                        $lvlCh = '.';
+                        $spcCh = '_';
                     }
                     break;
                 }
             }
-            $str_arr = \explode($exploder_ch, $src_rows);
+            $strArr = \explode($explCh, $srcRows);
         } else {
             throw new \InvalidArgumentException("Array or String required");
         }
@@ -37,16 +37,16 @@ class HELMLmicro
         $result = [];
         $stack = [];
 
-        $min_level = -1;
+        $minLevel = -1;
         
-        $lines_cnt = \count($str_arr);
-        for ($lnum = 0; $lnum < $lines_cnt; $lnum++) {
-            $line = \trim($str_arr[$lnum]);
+        $linesCnt = \count($strArr);
+        for ($lNum = 0; $lNum < $linesCnt; $lNum++) {
+            $line = \trim($strArr[$lNum]);
 
             if (!\strlen($line) || \substr($line, 0, 1) === '#' || \substr($line, 0, 2) === '//') continue;
 
             $level = 0;
-            while (\substr($line, $level, 1) === $lvl_ch) {
+            while (\substr($line, $level, 1) === $lvlCh) {
                 $level++;
             }
 
@@ -54,17 +54,17 @@ class HELMLmicro
                 $line = \substr($line, $level);
             }
 
-            $parts = \explode($lvl_ch, $line, 2);
+            $parts = \explode($lvlCh, $line, 2);
             $key = $parts[0] ? $parts[0] : '0';
             $value = isset($parts[1]) ? $parts[1] : null;
 
-            if ($min_level < 0 || $min_level > $level) {
-                $min_level = $level;
+            if ($minLevel < 0 || $minLevel > $level) {
+                $minLevel = $level;
             }
 
-            $extra_keys_cnt = \count($stack) - $level + $min_level;
-            if ($extra_keys_cnt > 0) {
-                 while(\count($stack) && $extra_keys_cnt--) {
+            $extraKeysCnt = \count($stack) - $level + $minLevel;
+            if ($extraKeysCnt > 0) {
+                 while(\count($stack) && $extraKeysCnt--) {
                      \array_pop($stack);
                  }
             }
@@ -78,24 +78,24 @@ class HELMLmicro
                 if ($key === '--') {
                     $key = \count($parent);
                 } else {
-                    $decoded_key = self::base64Udecode(\substr($key, 1));
-                    if (false !== $decoded_key) {
-                        $key = $decoded_key;
+                    $decodedKey = self::base64Udecode(\substr($key, 1));
+                    if (false !== $decodedKey) {
+                        $key = $decodedKey;
                     }
                 }
             }
 
-            if (\is_null($value) || !\strlen($value)) {
+            if (\is_null($value) || $value === '') {
                 $parent[$key] = [];
                 \array_push($stack, $key);
             } else {
                 if ($value === '`') {
                     $value = [];
-                    for($cln = $lnum + 1; $cln < $lines_cnt; $cln++) {
-                        $line = \trim($str_arr[$cln],"\r\n\x00");
+                    for($cln = $lNum + 1; $cln < $linesCnt; $cln++) {
+                        $line = \trim($strArr[$cln],"\r\n\x00");
                         if ($line === '`') {
                             $value = \implode("\n", $value);
-                            $lnum = $cln;
+                            $lNum = $cln;
                             break;
                         }
                         $value[] = $line;
@@ -104,7 +104,7 @@ class HELMLmicro
                         $value = '`ERR`';
                     }
                 } else {
-                    $value = self::valueDecoder($value, $spc_ch);
+                    $value = self::valueDecoder($value, $spcCh);
                 }
                
                 $parent[$key] = $value;
@@ -114,10 +114,17 @@ class HELMLmicro
         return $result;
     }
 
-    public static function valueDecoder($encodedValue, $spc_ch = ' ') {
-        $first_char = \substr($encodedValue, 0, 1);
-        if ($spc_ch === $first_char) {
-            if (\substr($encodedValue, 0, 2) !== $spc_ch . $spc_ch) {
+    public static function valueDecoder($encodedValue, $spcCh = ' ') {
+        $fc = \substr($encodedValue, 0, 1);
+        if ('-' === $fc || '+' === $fc) {
+            $encodedValue = self::base64Udecode(\substr($encodedValue, 1));
+            if ('-' === $fc) {
+                return $encodedValue;
+            }
+            $fc = \substr($encodedValue, 0, 1);
+        }
+        if ($spcCh === $fc) {
+            if (\substr($encodedValue, 0, 2) !== $spcCh . $spcCh) {
                 return \substr($encodedValue, 1);
             }
             $slicedValue = \substr($encodedValue, 2);
@@ -130,14 +137,12 @@ class HELMLmicro
                 return self::$SPEC_TYPE_VALUES[$slicedValue];
             }            
             return $encodedValue;
-        } elseif ('"' === $first_char || "'" === $first_char) {
+        } elseif ('"' === $fc || "'" === $fc) {
             $encodedValue = \substr($encodedValue, 1, -1);
-            if ("'" === $first_char) {
+            if ("'" === $fc) {
                 return $encodedValue;
             }
             return \stripcslashes($encodedValue);
-        } elseif ('-' === $first_char) {
-            return self::base64Udecode(substr($encodedValue, 1));
         }
         
         return self::base64Udecode($encodedValue);
