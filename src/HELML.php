@@ -1,7 +1,7 @@
 <?php
 namespace dynoser\HELML;
 
-use dynoser\base85\vc85;
+use dynoser\HELML\vc85;
 
 /*
  * This code represents a PHP implementation of the HELML class without dependencies.
