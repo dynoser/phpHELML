@@ -34,9 +34,6 @@ class HELMLdecoder {
     // Hook for decode "  Value"
     public static $CUSTOM_FORMAT_DECODER = null;
 
-    // Default value decoder is self::decodeValue, may be replace here
-    public static $CUSTOM_VALUE_DECODER = null;
-    
     // Enable auto-create array when key already exists
     public static $ENABLE_DBL_KEY_ARR = false;
     
@@ -209,8 +206,7 @@ class HELMLdecoder {
                         $value = '`ERR`';
                     }
                 } else {
-                    // Use default valueDecoder or custom decoder function is specified
-                    $value = \is_null(self::$CUSTOM_VALUE_DECODER) ? self::valueDecode($value, $spcCh) : \call_user_func(self::$CUSTOM_VALUE_DECODER, $value, $spcCh);
+                    $value = self::valueDecode($value, $spcCh);
                 }
                
                 if (self::$ENABLE_DBL_KEY_ARR && \array_key_exists($key, $parent)) {
